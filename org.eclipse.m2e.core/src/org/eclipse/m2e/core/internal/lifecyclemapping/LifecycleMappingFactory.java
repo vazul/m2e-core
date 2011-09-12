@@ -80,6 +80,7 @@ import org.eclipse.m2e.core.lifecyclemapping.model.PluginExecutionAction;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.configurator.AbstractLifecycleMapping;
 import org.eclipse.m2e.core.project.configurator.AbstractProjectConfigurator;
+import org.eclipse.m2e.core.project.configurator.AbstractProjectConfigurator2;
 import org.eclipse.m2e.core.project.configurator.ILifecycleMapping;
 import org.eclipse.m2e.core.project.configurator.ILifecycleMappingConfiguration;
 import org.eclipse.m2e.core.project.configurator.MojoExecutionBuildParticipant;
@@ -134,6 +135,8 @@ public class LifecycleMappingFactory {
 
   private static final String ELEMENT_RUN_ON_INCREMENTAL = "runOnIncremental";
 
+  private static final String ELEMENT_CONFIGURATION = "configuration"; //$NON-NLS-1$
+
   private static final String ATTR_GROUPID = "groupId";
 
   private static final String ATTR_ARTIFACTID = "artifactId";
@@ -145,7 +148,7 @@ public class LifecycleMappingFactory {
   private static final String LIFECYCLE_MAPPING_METADATA_CLASSIFIER = "lifecycle-mapping-metadata";
 
   private static List<LifecycleMappingMetadataSource> bundleMetadataSources = null;
-  
+
   public static LifecycleMappingResult calculateLifecycleMapping(MavenExecutionRequest templateRequest,
       MavenProjectFacade projectFacade, IProgressMonitor monitor) {
     long start = System.currentTimeMillis();
@@ -549,6 +552,14 @@ public class LifecycleMappingFactory {
       String message = NLS.bind(Messages.ProjectConfiguratorNotAvailable, configuratorId);
       throw new LifecycleMappingConfigurationException(message);
     }
+    Xpp3Dom configuration = ((PluginExecutionMetadata) metadata).getConfiguration().getChild(ELEMENT_CONFIGURATION);
+    if(configuration != null) {
+      if(projectConfigurator instanceof AbstractProjectConfigurator2) {
+        ((AbstractProjectConfigurator2) projectConfigurator).setConfiguration(configuration);
+      } else {
+        log.warn("Project configurator {} does not support configuration injection", configuration);
+      }
+    }
     return projectConfigurator;
   }
 
@@ -607,7 +618,8 @@ public class LifecycleMappingFactory {
   public static MojoExecutionBuildParticipant createMojoExecutionBuildParicipant(IMavenProjectFacade projectFacade,
       MojoExecution mojoExecution, IPluginExecutionMetadata executionMetadata) {
     boolean runOnIncremental = true;
-    Xpp3Dom child = ((PluginExecutionMetadata) executionMetadata).getConfiguration().getChild(ELEMENT_RUN_ON_INCREMENTAL);
+    Xpp3Dom child = ((PluginExecutionMetadata) executionMetadata).getConfiguration().getChild(
+        ELEMENT_RUN_ON_INCREMENTAL);
     if(child != null) {
       runOnIncremental = Boolean.parseBoolean(child.getValue());
     }
@@ -920,7 +932,7 @@ public class LifecycleMappingFactory {
   public synchronized static List<LifecycleMappingMetadataSource> getBundleMetadataSources() {
     if(bundleMetadataSources == null) {
       bundleMetadataSources = new ArrayList<LifecycleMappingMetadataSource>();
-      
+
       IExtensionRegistry registry = Platform.getExtensionRegistry();
       IExtensionPoint configuratorsExtensionPoint = registry
           .getExtensionPoint(EXTENSION_LIFECYCLE_MAPPING_METADATA_SOURCE);

@@ -19,6 +19,8 @@ import java.util.List;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenExecutionRequest;
@@ -122,6 +124,7 @@ public interface IMaven {
   public <T> T getMojoParameterValue(MavenSession session, MojoExecution mojoExecution, String parameter,
       Class<T> asType) throws CoreException;
 
+  @Deprecated
   public <T> T getMojoParameterValue(String parameter, Class<T> type, MavenSession session, Plugin plugin,
       ConfigurationContainer configuration, String goal) throws CoreException;
 

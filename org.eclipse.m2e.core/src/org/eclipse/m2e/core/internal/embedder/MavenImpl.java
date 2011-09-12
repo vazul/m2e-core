@@ -52,7 +52,6 @@ import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.classworlds.ClassWorld;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.classworlds.realm.NoSuchRealmException;
-import org.codehaus.plexus.component.configurator.ComponentConfigurationException;
 import org.codehaus.plexus.component.configurator.converters.ConfigurationConverter;
 import org.codehaus.plexus.component.configurator.converters.lookup.ConverterLookup;
 import org.codehaus.plexus.component.configurator.converters.lookup.DefaultConverterLookup;
@@ -96,16 +95,12 @@ import org.apache.maven.model.interpolation.ModelInterpolator;
 import org.apache.maven.model.io.ModelReader;
 import org.apache.maven.model.io.ModelWriter;
 import org.apache.maven.plugin.BuildPluginManager;
-import org.apache.maven.plugin.InvalidPluginDescriptorException;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.MojoNotFoundException;
 import org.apache.maven.plugin.PluginConfigurationException;
 import org.apache.maven.plugin.PluginContainerException;
-import org.apache.maven.plugin.PluginDescriptorParsingException;
 import org.apache.maven.plugin.PluginManagerException;
-import org.apache.maven.plugin.PluginNotFoundException;
 import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.apache.maven.plugin.PluginResolutionException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
@@ -787,31 +782,39 @@ public class MavenImpl implements IMaven, IMavenConfigurationChangeListener {
 
   public <T> T getMojoParameterValue(MavenSession session, MojoExecution mojoExecution, String parameter,
       Class<T> asType) throws CoreException {
+    Xpp3Dom dom = mojoExecution.getConfiguration();
+
+    if(dom == null) {
+      return null;
+    }
+
+    return getMojoParameterValue(session, mojoExecution, parameter, asType, new XmlPlexusConfiguration(dom));
+  }
+
+  public <T> T getMojoParameterValue(MavenSession session, MojoExecution mojoExecution, String parameter, Class<T> asType,
+      PlexusConfiguration configuration) throws CoreException {
+    ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator(session, mojoExecution);
+
+    return getMojoParameterValue(session, mojoExecution, parameter, asType, configuration, expressionEvaluator);
+  }
+
+  public <T> T getMojoParameterValue(MavenSession session, MojoExecution mojoExecution, String parameter,
+      Class<T> asType, PlexusConfiguration configuration, ExpressionEvaluator expressionEvaluator) throws CoreException {
+    PlexusConfiguration parameterConfiguration = configuration.getChild(parameter);
+
+    if(parameterConfiguration == null) {
+      return null;
+    }
+
     try {
       MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+
+      ConfigurationConverter typeConverter = converterLookup.lookupConverterForType(asType);
 
       ClassRealm pluginRealm = lookup(BuildPluginManager.class).getPluginRealm(session,
           mojoDescriptor.getPluginDescriptor());
 
-      ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator(session, mojoExecution);
-
-      ConfigurationConverter typeConverter = converterLookup.lookupConverterForType(asType);
-
-      Xpp3Dom dom = mojoExecution.getConfiguration();
-
-      if(dom == null) {
-        return null;
-      }
-
-      PlexusConfiguration pomConfiguration = new XmlPlexusConfiguration(dom);
-
-      PlexusConfiguration configuration = pomConfiguration.getChild(parameter);
-
-      if(configuration == null) {
-        return null;
-      }
-
-      Object value = typeConverter.fromConfiguration(converterLookup, configuration, asType,
+      Object value = typeConverter.fromConfiguration(converterLookup, parameterConfiguration, asType,
           mojoDescriptor.getImplementationClass(), pluginRealm, expressionEvaluator, null);
       return asType.cast(value);
     } catch(Exception e) {
@@ -820,12 +823,12 @@ public class MavenImpl implements IMaven, IMavenConfigurationChangeListener {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public <T> T getMojoParameterValue(String parameter, Class<T> type, MavenSession session, Plugin plugin,
       ConfigurationContainer configuration, String goal) throws CoreException {
     Xpp3Dom config = (Xpp3Dom) configuration.getConfiguration();
-    config = (config != null) ? config.getChild(parameter) : null;
 
-    PlexusConfiguration paramConfig = null;
+    PlexusConfiguration mojoConfiguration = null;
 
     if(config == null) {
       MojoDescriptor mojoDescriptor;
@@ -833,52 +836,19 @@ public class MavenImpl implements IMaven, IMavenConfigurationChangeListener {
       try {
         mojoDescriptor = lookup(BuildPluginManager.class).getMojoDescriptor(plugin, goal,
             session.getCurrentProject().getRemotePluginRepositories(), session.getRepositorySession());
-      } catch(PluginNotFoundException ex) {
-        throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-            Messages.MavenImpl_error_param, ex));
-      } catch(PluginResolutionException ex) {
-        throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-            Messages.MavenImpl_error_param, ex));
-      } catch(PluginDescriptorParsingException ex) {
-        throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-            Messages.MavenImpl_error_param, ex));
-      } catch(MojoNotFoundException ex) {
-        throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-            Messages.MavenImpl_error_param, ex));
-      } catch(InvalidPluginDescriptorException ex) {
+      } catch(Exception ex) {
         throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
             Messages.MavenImpl_error_param, ex));
       }
 
-      PlexusConfiguration defaultConfig = mojoDescriptor.getMojoConfiguration();
-      if(defaultConfig != null) {
-        paramConfig = defaultConfig.getChild(parameter, false);
-      }
+      mojoConfiguration = mojoDescriptor.getMojoConfiguration();
     } else {
-      paramConfig = new XmlPlexusConfiguration(config);
+      mojoConfiguration = new XmlPlexusConfiguration(config);
     }
 
-    if(paramConfig == null) {
-      return null;
-    }
+    MojoExecution mojoExecution = new MojoExecution(plugin, goal, "default"); //$NON-NLS-1$
 
-    try {
-      MojoExecution mojoExecution = new MojoExecution(plugin, goal, "default"); //$NON-NLS-1$
-
-      ExpressionEvaluator expressionEvaluator = new PluginParameterExpressionEvaluator(session, mojoExecution);
-
-      ConfigurationConverter typeConverter = converterLookup.lookupConverterForType(type);
-
-      Object value = typeConverter.fromConfiguration(converterLookup, paramConfig, type, Object.class,
-          plexus.getContainerRealm(), expressionEvaluator, null);
-      return type.cast(value);
-    } catch(ComponentConfigurationException ex) {
-      throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-          Messages.MavenImpl_error_param, ex));
-    } catch(ClassCastException ex) {
-      throw new CoreException(new Status(IStatus.ERROR, IMavenConstants.PLUGIN_ID, -1,
-          Messages.MavenImpl_error_param, ex));
-    }
+    return getMojoParameterValue(session, mojoExecution, parameter, type, mojoConfiguration);
   }
 
   /**
@@ -1125,7 +1095,7 @@ public class MavenImpl implements IMaven, IMavenConfigurationChangeListener {
     }
   }
 
-  private <T> T lookup(Class<T> clazz) throws CoreException {
+  public <T> T lookup(Class<T> clazz) throws CoreException {
     try {
       return getPlexusContainer().lookup(clazz);
     } catch(ComponentLookupException ex) {

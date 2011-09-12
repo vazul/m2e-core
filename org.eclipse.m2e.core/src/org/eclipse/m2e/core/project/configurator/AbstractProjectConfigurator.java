@@ -33,7 +33,6 @@ import org.eclipse.core.runtime.Status;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
 
 import org.eclipse.m2e.core.MavenPlugin;
@@ -47,8 +46,8 @@ import org.eclipse.m2e.core.lifecyclemapping.model.IPluginExecutionMetadata;
 import org.eclipse.m2e.core.lifecyclemapping.model.PluginExecutionAction;
 import org.eclipse.m2e.core.project.IMavenProjectChangedListener;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
-import org.eclipse.m2e.core.project.MavenProjectChangedEvent;
 import org.eclipse.m2e.core.project.IMavenProjectRegistry;
+import org.eclipse.m2e.core.project.MavenProjectChangedEvent;
 
 
 /**
@@ -166,10 +165,7 @@ public abstract class AbstractProjectConfigurator implements IExecutableExtensio
 
   protected <T> T getParameterValue(String parameter, Class<T> asType, MavenSession session, MojoExecution mojoExecution)
       throws CoreException {
-    PluginExecution execution = new PluginExecution();
-    execution.setConfiguration(mojoExecution.getConfiguration());
-    return maven.getMojoParameterValue(parameter, asType, session, mojoExecution.getPlugin(), execution,
-        mojoExecution.getGoal());
+    return maven.getMojoParameterValue(session, mojoExecution, parameter, asType);
   }
 
   protected void assertHasNature(IProject project, String natureId) throws CoreException {

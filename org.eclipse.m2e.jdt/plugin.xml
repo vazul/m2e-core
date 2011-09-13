@@ -49,6 +49,11 @@
             id="org.eclipse.m2e.jdt.javaConfigurator"
             name="%configurator.jdt.name">
       </configurator>
+      <configurator
+            class="org.eclipse.m2e.jdt.internal.SourcesGenerationProjectConfigurator"
+            id="org.eclipse.m2e.jdt.codeGenerationConfigurator"
+            name="%configurator.javaCodeGeneration.name">
+      </configurator>
    </extension>
    
    <extension point="org.eclipse.jdt.core.classpathVariableInitializer">

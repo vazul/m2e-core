@@ -161,7 +161,7 @@ public final class SourcesGenerationProjectConfigurator extends AbstractProjectC
   }
 
   protected boolean shouldRunOnIncrementalBuild(MavenSession session, MojoExecution execution) throws CoreException {
-    Boolean runOnIncremental = getConfiguratorParameterValue("sourceDirectory", Boolean.class, session, execution);
+    Boolean runOnIncremental = getConfiguratorParameterValue("runOnIncremental", Boolean.class, session, execution);
 
     if(Boolean.FALSE.equals(runOnIncremental)) {
       // we are explicitly told NOT to run on incremental build

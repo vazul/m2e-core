@@ -54,7 +54,7 @@ import org.eclipse.m2e.jdt.IJavaProjectConfigurator;
  * <li>File outputDirecotry, location of generated sources on the local filesystem. Default ${mojo.outputDirecotry}.</li>
  * <li>File sourceDirectory, location of input resources used by the code generation plugin. Used to suppress unneeded
  * code generation when there are no changes. Can be null, in which case code generation will be executed on full
- * workspace builds only.</li>
+ * workspace builds only, unless incremental build is forced with runOnIncremental=true</li>
  * <li>Boolean runOnIncremental, if <code>true</code> the code generation will be executed on incremental builds, if
  * <code>false</code> the code generation will be executed on full builds only. Default is to execute code generation on
  * incremental builds if sourceDirectory is provided.</li>

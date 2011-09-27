@@ -1,0 +1,99 @@
+
+
+* modello list of model files (as String)
+  http://modello.codehaus.org/modello-maven-plugin/java-mojo.html 
+* antlr3 uses sourceDirectory+includes+excludes and libDirectory
+  http://www.antlr.org/antlr3-maven-plugin/usage.html
+* jvnet:jaxb2 has most elaborate model for up-to-date check among plugins I've seen, relevant parameters
+  schemaDirectory+schemaIncludes+schemaExcludes, bindingDirectory+bindingIncludes+bindingExcludes, 
+  catalog, produces (patters of files produced by this plugin), otherDepends
+  http://static.highsource.org/mjiip/maven-jaxb2-plugin/generate-mojo.html
+* cxf-codegen-plugin generates java from wsdl. several ways to specify input
+  wsdlRoot+includes+excludes, 
+  wsdl+bindingFiles <= CUSTOM data objects!!!
+  http://cxf.apache.org/docs/maven-cxf-codegen-plugin-wsdl-to-java.html
+* jaxws-maven-plugin goes the other way around, it takes java class and generates jax-ws/wsdl descriptors
+  http://jax-ws-commons.java.net/jaxws-maven-plugin/wsgen-mojo.html
+* maven-jibx-plugin 
+  schemaLocation+includes+excludes,
+  includeBaseBindings  <= CUSTOM data objects!!!
+  http://jibx.sourceforge.net/maven-jibx-plugin/schema-codegen-mojo.html
+
+Ways to define generation inputs
+* directory+includes+excludes (possibly more than one)
+* list of input file paths as Strings
+* list of Files (jvnet:jaxb2 otherDepends)
+* collection of directory+includes+excludes
+* custom data structures
+
+
+
+=== modello
+
+<codegeneration>
+  <outputDirectories>
+    <outputDirectory>${mojo.outputDirectory}</outputDirectory>
+  </outputDirectories>
+
+  <!--
+    this is mostly theoretical exercise because modello
+    plexus-build-api and m2e does not need to know input sources.
+    still, using List<String> is a legitimate way to define generation input sources,
+    and we may want to support it even though there are no existing examples 
+  -->
+  <inputPaths>${mojo.models}</inputPaths>
+
+  <!-- 
+    for plexus-build-api and later tesla-build-avoidance users, 
+    we need to force incremental build support even when no generation input is declared 
+  -->
+  <incremental>true</incremental> 
+</codegeneration>
+
+
+=== antlr3
+
+<codegeneration>
+  <outputDirectories>
+    <outputDirectory>${mojo.outputDirectory}</outputDirectory>
+  </outputDirectories>
+
+  <inputResources>
+    <inputResource>
+      <directory>${mojo.sourceDirectory}</directory>
+      <includes>${mojo.includes}</includes>
+      <excludes>${mojo.excludes}</excludes>
+    </inputResource>
+    <inputResource>
+      <directory>${mojo.libDirectory}</directory>
+    </inputResource>
+  <inputResources>
+</codegeneration>
+
+
+=== jvnet:jaxb2
+
+<codegeneration>
+  <outputDirectories>
+    <outputDirectory>${mojo.generateDirectory}</outputDirectory>
+  </outputDirectories>
+
+  <inputResources>
+    <inputResource>
+      <directory>${mojo.schemaDirectory}</directory>
+      <includes>${mojo.schemaIncludes}</includes>
+      <excludes>${mojo.schemaExcludes}</excludes>
+    </inputResource>
+    <inputResource>
+      <directory>${mojo.bindingDirectory}</directory>
+      <includes>${mojo.bindingIncludes}</includes>
+      <excludes>${mojo.bindingExcludes}</excludes>
+    </inputResource>
+  <inputResources>
+
+  <inputFiles>${mojo.otherDepends}</inputFiles>
+</codegeneration>
+
+
+=== jibx
+

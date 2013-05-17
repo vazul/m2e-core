@@ -69,4 +69,6 @@ public interface IMavenConfiguration {
   public String getWorkspaceLifecycleMappingMetadataFile();
 
   public void setWorkspaceLifecycleMappingMetadataFile(String location) throws CoreException;
+
+  public boolean isSetWorkspaceResolutionDuringLaunch();
 }

@@ -42,6 +42,12 @@ public class ResolverConfigurationIO {
   private static final String P_RESOLVE_WORKSPACE_PROJECTS = "resolveWorkspaceProjects"; //$NON-NLS-1$
 
   /**
+   * Workspace dependency resolution during launch project preference key. Boolean, <code>true</code> means workspace
+   * dependency resolution is enabled during maven launches by default.
+   */
+  private static final String P_RESOLVE_WORKSPACE_PROJECTS_DURING_LAUNCH = "resolveWorkspaceProjectsDuringLaunch"; //$NON-NLS-1$
+
+  /**
    * Active profiles project preference key. Value is comma-separated list of enabled profiles.
    */
   //FIXME Bug 337353 Can't rename the preference key as it would break existing projects 
@@ -64,6 +70,8 @@ public class ResolverConfigurationIO {
       projectNode.put(P_VERSION, VERSION);
 
       projectNode.putBoolean(P_RESOLVE_WORKSPACE_PROJECTS, configuration.shouldResolveWorkspaceProjects());
+      projectNode.putBoolean(P_RESOLVE_WORKSPACE_PROJECTS_DURING_LAUNCH,
+          configuration.getResolveWorkspaceProjectsDuringLaunch());
 
       projectNode.put(P_SELECTED_PROFILES, configuration.getSelectedProfiles());
 
@@ -99,9 +107,10 @@ public class ResolverConfigurationIO {
 
     ResolverConfiguration configuration = new ResolverConfiguration();
     configuration.setResolveWorkspaceProjects(projectNode.getBoolean(P_RESOLVE_WORKSPACE_PROJECTS, false));
+    configuration.setResolveWorkspaceProjectsduringLaunch(projectNode.getBoolean(
+        P_RESOLVE_WORKSPACE_PROJECTS_DURING_LAUNCH, false));
     configuration.setSelectedProfiles(projectNode.get(P_SELECTED_PROFILES, "")); //$NON-NLS-1$
     configuration.setLifecycleMappingId(projectNode.get(P_LIFECYCLE_MAPPING_ID, (String) null));
     return configuration;
   }
-
 }

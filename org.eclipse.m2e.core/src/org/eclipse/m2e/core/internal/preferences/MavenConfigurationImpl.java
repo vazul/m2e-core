@@ -215,4 +215,12 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
     preferencesLookup[0].put(MavenPreferenceConstants.P_WORKSPACE_MAPPINGS_LOCATION, nvl(location));
     preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
   }
+
+  /* (non-Javadoc)
+   * @see org.eclipse.m2e.core.embedder.IMavenConfiguration#isSetWorkspaceResolutionDuringLaunch()
+   */
+  public boolean isSetWorkspaceResolutionDuringLaunch() {
+    return Boolean.parseBoolean(preferenceStore.get(
+        MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, null, preferencesLookup));
+  }
 }

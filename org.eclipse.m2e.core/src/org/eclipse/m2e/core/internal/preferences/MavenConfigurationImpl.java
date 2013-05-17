@@ -333,4 +333,12 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
     return Boolean.parseBoolean(
         preferenceStore.get(MavenPreferenceConstants.P_BUILDER_USE_NULL_SCHEDULING_RULE, null, preferencesLookup));
   }
+
+  /* (non-Javadoc)
+   * @see org.eclipse.m2e.core.embedder.IMavenConfiguration#isSetWorkspaceResolutionDuringLaunch()
+   */
+  public boolean isSetWorkspaceResolutionDuringLaunch() {
+    return Boolean.parseBoolean(preferenceStore.get(
+        MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, null, preferencesLookup));
+  }
 }

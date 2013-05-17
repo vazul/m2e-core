@@ -403,6 +403,8 @@ public class Messages extends NLS {
 
   public static String MavenPreferencePage_hide;
 
+  public static String MavenPreferencePage_setWorkspaceResDuringLaunchByDefault;
+
   public static String MavenPreferencePage_update;
 
   public static String MavenPreferencePage_autoUpdateProjectConfiguration;
@@ -410,6 +412,8 @@ public class Messages extends NLS {
   public static String MavenPreferencePage_updateProjectRequired_title;
 
   public static String MavenProjectPreferencePage_btnResolve;
+
+  public static String MavenProjectPreferencePage_btnResolveduringLaunch;
 
   public static String MavenProjectPreferencePage_dialog_message;
 

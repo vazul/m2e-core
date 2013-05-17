@@ -125,4 +125,5 @@ public interface IMavenConfiguration {
    */
   public boolean buildWithNullSchedulingRule();
 
+  public boolean isSetWorkspaceResolutionDuringLaunch();
 }

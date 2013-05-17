@@ -231,6 +231,9 @@ public class ExecutePomAction implements ILaunchShortcut, IExecutableExtension {
     if(projectFacade != null) {
       ResolverConfiguration configuration = projectFacade.getResolverConfiguration();
 
+      workingCopy.setAttribute(MavenLaunchConstants.ATTR_WORKSPACE_RESOLUTION,
+          configuration.shouldResolveWorkspaceProjectsDuringLaunch());
+
       String selectedProfiles = configuration.getSelectedProfiles();
       if(selectedProfiles != null && selectedProfiles.length() > 0) {
         workingCopy.setAttribute(MavenLaunchConstants.ATTR_PROFILES, selectedProfiles);

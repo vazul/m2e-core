@@ -23,6 +23,8 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -49,6 +51,8 @@ public class MavenProjectPreferencePage extends PropertyPage {
 
   private Button resolveWorspaceProjectsButton;
 
+  private Button resolveWorkspaceProjectsDuringLaunchButton;
+
 //  private Button includeModulesButton;
 
   private Text selectedProfilesText;
@@ -73,6 +77,28 @@ public class MavenProjectPreferencePage extends PropertyPage {
     GridData resolveWorspaceProjectsButtonData = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
     resolveWorspaceProjectsButton.setLayoutData(resolveWorspaceProjectsButtonData);
     resolveWorspaceProjectsButton.setText(Messages.MavenProjectPreferencePage_btnResolve);
+    resolveWorspaceProjectsButton.addSelectionListener(new SelectionListener() {
+
+      @SuppressWarnings("synthetic-access")
+      private ResolverConfiguration configuration = getResolverConfiguration();
+
+      @SuppressWarnings("synthetic-access")
+      public void widgetSelected(SelectionEvent event) {
+        if(resolveWorspaceProjectsButton.getSelection()) {
+          resolveWorkspaceProjectsDuringLaunchButton.setEnabled(true);
+        } else {
+          resolveWorkspaceProjectsDuringLaunchButton.setEnabled(false);
+        }
+      }
+
+      public void widgetDefaultSelected(SelectionEvent event) {
+      }
+    });
+
+    resolveWorkspaceProjectsDuringLaunchButton = new Button(composite, SWT.CHECK);
+    GridData resolveWorspaceProjectsDuringLaunchButtonData = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
+    resolveWorkspaceProjectsDuringLaunchButton.setLayoutData(resolveWorspaceProjectsDuringLaunchButtonData);
+    resolveWorkspaceProjectsDuringLaunchButton.setText(Messages.MavenProjectPreferencePage_btnResolveduringLaunch);
 
 //    includeModulesButton = new Button(composite, SWT.CHECK);
 //    GridData gd = new GridData(SWT.FILL, SWT.CENTER, false, false, 2, 1);
@@ -106,6 +132,10 @@ public class MavenProjectPreferencePage extends PropertyPage {
   private void init(ResolverConfiguration configuration) {
 
     resolveWorspaceProjectsButton.setSelection(configuration.shouldResolveWorkspaceProjects());
+    if(!resolveWorspaceProjectsButton.getSelection()) {
+      resolveWorkspaceProjectsDuringLaunchButton.setEnabled(false);
+    }
+    resolveWorkspaceProjectsDuringLaunchButton.setSelection(configuration.getResolveWorkspaceProjectsDuringLaunch());
 //    includeModulesButton.setSelection(configuration.shouldIncludeModules());
     selectedProfilesText.setText(configuration.getSelectedProfiles());
   }
@@ -122,13 +152,17 @@ public class MavenProjectPreferencePage extends PropertyPage {
     }
 
     final ResolverConfiguration configuration = getResolverConfiguration();
-    if(configuration.getSelectedProfiles().equals(selectedProfilesText.getText()) &&
+    if(configuration.getSelectedProfiles().equals(selectedProfilesText.getText())
+        &&
 //        configuration.shouldIncludeModules()==includeModulesButton.getSelection() &&
-        configuration.shouldResolveWorkspaceProjects() == resolveWorspaceProjectsButton.getSelection()) {
+        configuration.shouldResolveWorkspaceProjects() == resolveWorspaceProjectsButton.getSelection()
+        && configuration.getResolveWorkspaceProjectsDuringLaunch() == resolveWorkspaceProjectsDuringLaunchButton
+            .getSelection()) {
       return true;
     }
 
     configuration.setResolveWorkspaceProjects(resolveWorspaceProjectsButton.getSelection());
+    configuration.setResolveWorkspaceProjectsduringLaunch(resolveWorkspaceProjectsDuringLaunchButton.getSelection());
 //    configuration.setIncludeModules(includeModulesButton.getSelection());
     configuration.setSelectedProfiles(selectedProfilesText.getText());
 

@@ -323,4 +323,12 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
   public void setAutomaticallyUpdateConfiguration(boolean value) {
     preferencesLookup[0].putBoolean(MavenPreferenceConstants.P_AUTO_UPDATE_CONFIGURATION, value);
   }
+
+  /* (non-Javadoc)
+   * @see org.eclipse.m2e.core.embedder.IMavenConfiguration#isSetWorkspaceResolutionDuringLaunch()
+   */
+  public boolean isSetWorkspaceResolutionDuringLaunch() {
+    return Boolean.parseBoolean(preferenceStore.get(
+        MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, null, preferencesLookup));
+  }
 }

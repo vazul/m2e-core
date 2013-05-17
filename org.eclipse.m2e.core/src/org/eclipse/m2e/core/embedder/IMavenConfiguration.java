@@ -117,4 +117,6 @@ public interface IMavenConfiguration {
    * @since 1.7
    */
   public String getOverridingManagedVersionExecutionSeverity();
+
+  public boolean isSetWorkspaceResolutionDuringLaunch();
 }

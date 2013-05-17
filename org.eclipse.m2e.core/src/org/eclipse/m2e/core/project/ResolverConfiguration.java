@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import org.eclipse.m2e.core.MavenPlugin;
+
 
 /**
  * Resolver configuration holder. TODO need a better name, this configures all aspects of maven project in eclipse, not
@@ -27,6 +29,9 @@ public class ResolverConfiguration implements Serializable {
   private static final long serialVersionUID = 1258510761534886581L;
 
   private boolean resolveWorkspaceProjects = true;
+
+  private boolean resolveWorkspaceProjectsDuringLaunch = MavenPlugin.getMavenConfiguration()
+      .isSetWorkspaceResolutionDuringLaunch();
 
   private String selectedProfiles = ""; //$NON-NLS-1$
 
@@ -44,6 +49,14 @@ public class ResolverConfiguration implements Serializable {
 
   public boolean shouldResolveWorkspaceProjects() {
     return this.resolveWorkspaceProjects;
+  }
+
+  public boolean shouldResolveWorkspaceProjectsDuringLaunch() {
+    return this.resolveWorkspaceProjects && resolveWorkspaceProjectsDuringLaunch;
+  }
+
+  public boolean getResolveWorkspaceProjectsDuringLaunch() {
+    return resolveWorkspaceProjectsDuringLaunch;
   }
 
   /**
@@ -68,6 +81,10 @@ public class ResolverConfiguration implements Serializable {
 
   public void setResolveWorkspaceProjects(boolean resolveWorkspaceProjects) {
     this.resolveWorkspaceProjects = resolveWorkspaceProjects;
+  }
+
+  public void setResolveWorkspaceProjectsduringLaunch(boolean resolveWorkspaceProjectsDuringLaunch) {
+    this.resolveWorkspaceProjectsDuringLaunch = resolveWorkspaceProjectsDuringLaunch;
   }
 
   /**

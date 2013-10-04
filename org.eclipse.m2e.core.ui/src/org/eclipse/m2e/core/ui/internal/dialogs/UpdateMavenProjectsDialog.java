@@ -236,8 +236,12 @@ public class UpdateMavenProjectsDialog extends TitleAreaDialog implements IMenuL
     projects = getMavenCodebases();
     codebaseViewer.setInput(projects);
     codebaseViewer.expandAll();
-    for(IProject project : initialSelection) {
-      codebaseViewer.setSubtreeChecked(project, true);
+    if(MavenPlugin.getMavenConfiguration().isCheckSubmodulesUponUpdate()) {
+      for(IProject project : initialSelection) {
+        codebaseViewer.setSubtreeChecked(project, true);
+      }
+    } else {
+      codebaseViewer.setCheckedElements(initialSelection);
     }
 
     // Reveal the first element

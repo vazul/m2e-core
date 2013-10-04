@@ -71,4 +71,6 @@ public interface IMavenConfiguration {
   public void setWorkspaceLifecycleMappingMetadataFile(String location) throws CoreException;
 
   public boolean isSetWorkspaceResolutionDuringLaunch();
+
+  public boolean isCheckSubmodulesUponUpdate();
 }

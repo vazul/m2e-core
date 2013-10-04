@@ -223,4 +223,12 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
     return Boolean.parseBoolean(preferenceStore.get(
         MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, null, preferencesLookup));
   }
+
+  /* (non-Javadoc)
+   * @see org.eclipse.m2e.core.embedder.IMavenConfiguration#isCheckSubmodulesUponUpdate()
+   */
+  public boolean isCheckSubmodulesUponUpdate() {
+    return Boolean.parseBoolean(preferenceStore.get(MavenPreferenceConstants.P_CHECK_SUBMODULS_UPON_UPDATE, null,
+        preferencesLookup));
+  }
 }

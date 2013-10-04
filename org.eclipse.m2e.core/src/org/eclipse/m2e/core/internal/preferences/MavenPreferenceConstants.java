@@ -80,6 +80,9 @@ public interface MavenPreferenceConstants {
   public static final String P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT = PREFIX
       + "setWorkspaceResolutionDuringLaunchAtImport"; //$NON-NLS-1$
 
+  /** boolean */
+  public static final String P_CHECK_SUBMODULS_UPON_UPDATE = PREFIX + "checkSubmodulesUponUpdate"; //$NON-NLS-1$
+
   public static final String P_SHOW_CONSOLE_ON_ERR = PREFIX + "showConsoleOnErr"; //$NON-NLS-1$
 
   public static final String P_SHOW_CONSOLE_ON_OUTPUT = PREFIX + "showConsoleOnOutput"; //$NON-NLS-1$

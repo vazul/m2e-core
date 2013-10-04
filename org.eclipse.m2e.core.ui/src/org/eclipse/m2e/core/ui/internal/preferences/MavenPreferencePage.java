@@ -81,6 +81,9 @@ public class MavenPreferencePage extends FieldEditorPreferencePage implements IW
     addField(new BooleanFieldEditor(MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, //
         Messages.MavenPreferencePage_setWorkspaceResDuringLaunchByDefault, getFieldEditorParent()));
 
+    addField(new BooleanFieldEditor(MavenPreferenceConstants.P_CHECK_SUBMODULS_UPON_UPDATE, //
+        Messages.MavenPreferencePage_checkSubmodulesUponUpdate, getFieldEditorParent()));
+
     GridData comboCompositeGridData = new GridData();
     comboCompositeGridData.verticalIndent = 25;
     comboCompositeGridData.horizontalSpan = 3;

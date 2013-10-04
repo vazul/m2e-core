@@ -49,6 +49,8 @@ public class MavenPreferenceInitializer extends AbstractPreferenceInitializer {
 
     store.putBoolean(MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, false);
 
+    store.putBoolean(MavenPreferenceConstants.P_CHECK_SUBMODULS_UPON_UPDATE, true);
+
     store.putBoolean(MavenPreferenceConstants.P_SHOW_CONSOLE_ON_ERR, true);
     store.putBoolean(MavenPreferenceConstants.P_SHOW_CONSOLE_ON_OUTPUT, false);
 

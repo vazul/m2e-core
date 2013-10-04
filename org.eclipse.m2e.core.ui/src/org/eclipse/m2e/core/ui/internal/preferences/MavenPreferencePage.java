@@ -92,6 +92,9 @@ public class MavenPreferencePage extends FieldEditorPreferencePage implements IW
     addField(new BooleanFieldEditor(MavenPreferenceConstants.P_SET_WORKSPACE_RESOLUTION_DURING_LAUNCH_AT_IMPORT, //
         Messages.MavenPreferencePage_setWorkspaceResDuringLaunchByDefault, getFieldEditorParent()));
 
+    addField(new BooleanFieldEditor(MavenPreferenceConstants.P_CHECK_SUBMODULS_UPON_UPDATE, //
+        Messages.MavenPreferencePage_checkSubmodulesUponUpdate, getFieldEditorParent()));
+
     String[][] checksumPolicies = new String[][] {
         new String[] {Messages.preferencesGlobalChecksumPolicy_default, null},
         new String[] {Messages.preferencesGlobalChecksumPolicy_ignore, ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE},

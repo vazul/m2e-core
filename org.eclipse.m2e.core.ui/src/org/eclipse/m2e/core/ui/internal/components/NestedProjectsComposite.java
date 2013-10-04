@@ -64,6 +64,7 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 
+import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.ui.internal.MavenImages;
 import org.eclipse.m2e.core.ui.internal.Messages;
@@ -184,8 +185,12 @@ public class NestedProjectsComposite extends Composite implements IMenuListener 
       codebaseViewer.setInput(projects);
       codebaseViewer.expandAll();
       if(initialSelection != null) { // windowbuilder compat
-        for(IProject project : initialSelection) {
-          setSubtreeChecked(project, true);
+        if(MavenPlugin.getMavenConfiguration().isCheckSubmodulesUponUpdate()) {
+          for(IProject project : initialSelection) {
+            setSubtreeChecked(project, true);
+          }
+        } else {
+          codebaseViewer.setCheckedElements(initialSelection);
         }
 
         // Reveal the first element

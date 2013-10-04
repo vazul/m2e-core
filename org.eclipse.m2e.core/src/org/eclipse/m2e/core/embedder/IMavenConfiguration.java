@@ -119,4 +119,6 @@ public interface IMavenConfiguration {
   public String getOverridingManagedVersionExecutionSeverity();
 
   public boolean isSetWorkspaceResolutionDuringLaunch();
+
+  public boolean isCheckSubmodulesUponUpdate();
 }

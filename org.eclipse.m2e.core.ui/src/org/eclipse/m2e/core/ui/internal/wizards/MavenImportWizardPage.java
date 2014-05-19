@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 Sonatype, Inc.
+ * Copyright (c) 2008-2013 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *      Sonatype, Inc. - initial API and implementation
+ *      Red Hat, Inc. - refactored lifecycle mapping discovery
  *******************************************************************************/
 
 package org.eclipse.m2e.core.ui.internal.wizards;
@@ -16,12 +17,17 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -43,7 +49,6 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StyledString;
 import org.eclipse.jface.viewers.Viewer;
-import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.FocusAdapter;
@@ -71,12 +76,12 @@ import org.apache.maven.model.Parent;
 
 import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.embedder.MavenModelManager;
-import org.eclipse.m2e.core.internal.lifecyclemapping.discovery.LifecycleMappingConfiguration;
 import org.eclipse.m2e.core.project.AbstractProjectScanner;
 import org.eclipse.m2e.core.project.LocalProjectScanner;
 import org.eclipse.m2e.core.project.MavenProjectInfo;
 import org.eclipse.m2e.core.project.ProjectImportConfiguration;
 import org.eclipse.m2e.core.ui.internal.Messages;
+import org.eclipse.m2e.core.ui.internal.WorkingSets;
 
 
 /**
@@ -97,13 +102,9 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
 
   private IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
 
-  private WorkingSetGroup workingSetGroup;
-
   private boolean showLocation = true;
 
   private boolean basedirRemameRequired = false;
-
-  private final List<IWorkingSet> workingSets;
 
   private String rootDirectory;
 
@@ -113,9 +114,14 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
 
   private Button btnDeselectTree;
 
-  protected MavenImportWizardPage(ProjectImportConfiguration importConfiguration, List<IWorkingSet> workingSets) {
+  private Button createWorkingSet;
+
+  private Combo workingSetName;
+
+  private String preselectedWorkingSetName;
+
+  public MavenImportWizardPage(ProjectImportConfiguration importConfiguration) {
     super("MavenProjectImportWizardPage", importConfiguration); //$NON-NLS-1$
-    this.workingSets = workingSets;
     setTitle(org.eclipse.m2e.core.ui.internal.Messages.MavenImportWizardPage_title);
     setDescription(org.eclipse.m2e.core.ui.internal.Messages.MavenImportWizardPage_desc);
     setPageComplete(false);
@@ -219,7 +225,6 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
     projectTreeViewer.addCheckStateListener(new ICheckStateListener() {
       public void checkStateChanged(CheckStateChangedEvent event) {
         updateCheckedState();
-        getMappingConfiguration().setSelectedProjects(getProjects());
         setPageComplete();
       }
     });
@@ -374,7 +379,24 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
       }
     });
 
-    this.workingSetGroup = new WorkingSetGroup(composite, workingSets, getShell());
+    createWorkingSet = new Button(composite, SWT.CHECK);
+    createWorkingSet.setText(Messages.MavenImportWizardPage_createWorkingSet);
+    createWorkingSet.setSelection(true);
+    createWorkingSet.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 3, 1));
+    createWorkingSet.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        boolean enabled = createWorkingSet.getSelection();
+        workingSetName.setEnabled(enabled);
+        if(enabled) {
+          workingSetName.setFocus();
+        }
+      }
+    });
+
+    workingSetName = new Combo(composite, SWT.BORDER);
+    GridData gd_workingSet = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
+    gd_workingSet.horizontalIndent = 20;
+    workingSetName.setLayoutData(gd_workingSet);
 
     createAdvancedSettings(composite, new GridData(SWT.FILL, SWT.TOP, false, false, 3, 1));
     resolverConfigurationComponent.template.addModifyListener(new ModifyListener() {
@@ -401,16 +423,14 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
 
   public void dispose() {
     super.dispose();
-    workingSetGroup.dispose();
   }
 
-  protected void scanProjects() {
+  public void scanProjects() {
     final AbstractProjectScanner<MavenProjectInfo> projectScanner = getProjectScanner();
     try {
       getWizard().getContainer().run(true, true, new IRunnableWithProgress() {
         public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
           projectScanner.run(monitor);
-          ((MavenImportWizard) getWizard()).scanProjects(getProjects(projectScanner.getProjects()), monitor);
         }
 
         //this collects all projects for analyzing..
@@ -425,7 +445,8 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
 
       });
 
-      projectTreeViewer.setInput(projectScanner.getProjects());
+      List<MavenProjectInfo> projects = projectScanner.getProjects();
+      projectTreeViewer.setInput(projects);
       projectTreeViewer.expandAll();
       // projectTreeViewer.setAllChecked(true);
       setAllChecked(true);
@@ -433,16 +454,14 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
       setErrorMessage(null);
       setMessage(null);
       loadingErrorMessage = null;
-      LifecycleMappingConfiguration config = ((MavenImportWizard) getWizard()).getMappingConfiguration();
+
+      updateWorkingSet(projects);
 
       //mkleint: XXX this sort of error handling is rather unfortunate
 
       List<Throwable> errors = new ArrayList<Throwable>(projectScanner.getErrors());
-      if(config != null) {
-        errors.addAll(config.getErrors().values());
-      }
       if(!errors.isEmpty()) {
-        StringBuffer sb = new StringBuffer(NLS.bind(Messages.wizardImportPageScanningErrors, errors.size()));
+        StringBuilder sb = new StringBuilder(NLS.bind(Messages.wizardImportPageScanningErrors, errors.size()));
         int n = 1;
         for(Throwable ex : errors) {
           if(ex instanceof CoreException) {
@@ -469,13 +488,61 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
         msg = e.getMessage();
         log.error(msg, e);
       } else {
-        msg = "Scanning error " + projectScanner.getDescription() + "; " + e.toString(); //$NON-NLS-2$
+        msg = "Scanning error " + projectScanner.getDescription() + "; " + e.toString(); //$NON-NLS-1$//$NON-NLS-2$
         log.error(msg, e);
       }
       projectTreeViewer.setInput(null);
       setPageComplete(false);
       setErrorMessage(msg);
     }
+  }
+
+  private void updateWorkingSet(List<MavenProjectInfo> projects) {
+    MavenProjectInfo rootProject = null;
+    if(projects != null && projects.size() == 1) {
+      rootProject = projects.get(0);
+    }
+
+    // check if working set name was preselected
+    if(preselectedWorkingSetName != null) {
+      updateWorkingSet(preselectedWorkingSetName, true);
+      return;
+    }
+
+    // check if imported project(s) are nested inside existing workspace project
+    String rootDirectory = rootDirectoryCombo != null ? rootDirectoryCombo.getText().trim() : null;
+    if(rootDirectory != null && rootDirectory.length() > 0) {
+      Set<IWorkingSet> workingSets = new HashSet<IWorkingSet>();
+      for(IContainer container : workspaceRoot.findContainersForLocationURI(new File(rootDirectory).toURI())) {
+        workingSets.addAll(WorkingSets.getAssignedWorkingSets(container.getProject()));
+      }
+      if(workingSets.size() == 1) {
+        updateWorkingSet(workingSets.iterator().next().getName(), true);
+        return;
+      }
+    }
+
+    // derive working set name from project name
+    if(rootProject != null) {
+      updateWorkingSet(getImportConfiguration().getProjectName(rootProject.getModel()), //
+          !rootProject.getProjects().isEmpty());
+    } else {
+      updateWorkingSet(null, false);
+    }
+  }
+
+  private void updateWorkingSet(String name, boolean enabled) {
+    Set<String> workingSetNames = new LinkedHashSet<String>();
+    if(name == null) {
+      name = ""; //$NON-NLS-1$
+    } else {
+      workingSetNames.add(name);
+    }
+    workingSetNames.addAll(Arrays.asList(WorkingSets.getWorkingSets()));
+    workingSetName.setItems(workingSetNames.toArray(new String[workingSetNames.size()]));
+    workingSetName.setText(name);
+    createWorkingSet.setSelection(enabled);
+    workingSetName.setEnabled(enabled);
   }
 
   void setAllChecked(boolean state) {
@@ -559,6 +626,14 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
     return false;
   }
 
+  public boolean shouldCreateWorkingSet() {
+    return createWorkingSet.getSelection();
+  }
+
+  public String getWorkingSetName() {
+    return workingSetName.getText();
+  }
+
   protected AbstractProjectScanner<MavenProjectInfo> getProjectScanner() {
     File root = workspaceRoot.getLocation().toFile();
     MavenModelManager modelManager = MavenPlugin.getMavenModelManager();
@@ -594,6 +669,11 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
     }
 
     return checkedProjects;
+  }
+
+  public MavenProjectInfo getRootProject() {
+    Object[] elements = projectTreeViewer.getExpandedElements();
+    return elements == null || elements.length == 0 ? null : (MavenProjectInfo) elements[0];
   }
 
   /**
@@ -633,30 +713,15 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
     projectTreeViewer.refresh();
   }
 
-  @Override
-  public IWizardPage getNextPage() {
-    IWizardPage next = super.getNextPage();
-    LifecycleMappingConfiguration config = getMappingConfiguration();
-    if(config == null || (config.isMappingComplete(true) && config.getAllProposals().isEmpty())) {
-      next = null;
-    }
-    return next;
-  }
-
   void setPageComplete() {
     Object[] checkedElements = projectTreeViewer.getCheckedElements();
     setPageComplete(checkedElements != null && checkedElements.length > 0);
-  }
-
-  LifecycleMappingConfiguration getMappingConfiguration() {
-    return ((MavenImportWizard) getWizard()).getMappingConfiguration();
   }
 
   void setProjectSubtreeChecked(boolean checked) {
     ITreeSelection selection = (ITreeSelection) projectTreeViewer.getSelection();
     projectTreeViewer.setSubtreeChecked(selection.getFirstElement(), checked);
     updateCheckedState();
-    getMappingConfiguration().setSelectedProjects(getProjects());
     setPageComplete();
   }
 
@@ -735,15 +800,24 @@ public class MavenImportWizardPage extends AbstractMavenWizardPage {
       if(element instanceof MavenProjectInfo) {
         MavenProjectInfo info = (MavenProjectInfo) element;
         StyledString ss = new StyledString();
-        ss.append(info.getLabel() + "  ");
+        ss.append(info.getLabel() + "  "); //$NON-NLS-1$
         ss.append(getId(info), StyledString.DECORATIONS_STYLER);
         if(!info.getProfiles().isEmpty()) {
-          ss.append(" - " + info.getProfiles(), StyledString.QUALIFIER_STYLER);
+          ss.append(" - " + info.getProfiles(), StyledString.QUALIFIER_STYLER); //$NON-NLS-1$
         }
         return ss;
       }
       return null;
     }
 
+  }
+
+  /**
+   * Preselected default working set name.
+   * 
+   * @since 1.5
+   */
+  public void setWorkingSetName(String workingSetName) {
+    this.preselectedWorkingSetName = workingSetName;
   }
 }

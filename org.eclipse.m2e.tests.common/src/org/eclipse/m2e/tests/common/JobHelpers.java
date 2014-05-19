@@ -12,9 +12,10 @@
 package org.eclipse.m2e.tests.common;
 
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRunnable;
@@ -29,9 +30,11 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
 
+import org.eclipse.m2e.core.internal.embedder.MavenExecutionContext;
 import org.eclipse.m2e.core.internal.jobs.IBackgroundProcessingQueue;
 
 
+@SuppressWarnings("restriction")
 public class JobHelpers {
 
   private static final int POLLING_DELAY = 10;
@@ -96,11 +99,16 @@ public class JobHelpers {
     for(IBackgroundProcessingQueue queue : getProcessingQueues(jobManager)) {
       queue.join();
       if(!queue.isEmpty()) {
-        IStatus status = queue.run(monitor);
-        if(!status.isOK()) {
-          throw new CoreException(status);
+        Deque<MavenExecutionContext> context = MavenExecutionContext.suspend();
+        try {
+          IStatus status = queue.run(monitor);
+          if(!status.isOK()) {
+            throw new CoreException(status);
+          }
+          processed = true;
+        } finally {
+          MavenExecutionContext.resume(context);
         }
-        processed = true;
       }
       if(queue.isEmpty()) {
         queue.cancel();

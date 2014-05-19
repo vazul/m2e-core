@@ -89,6 +89,9 @@ public class ClasspathEntryDescriptor implements IClasspathEntryDescriptor {
     if(scope != null) {
       attributes.put(IClasspathManager.SCOPE_ATTRIBUTE, scope);
     }
+    if(optionalDependency) {
+      attributes.put(IClasspathManager.OPTIONALDEPENDENCY_ATTRIBUTE, Boolean.toString(true));
+    }
 
     IClasspathAttribute[] attributesArray = new IClasspathAttribute[attributes.size()];
     int attributeIndex = 0;
@@ -124,6 +127,14 @@ public class ClasspathEntryDescriptor implements IClasspathEntryDescriptor {
         entry = JavaCore.newProjectEntry(path, //
             accessRulesArray, //
             combineAccessRules, //
+            attributesArray, //
+            exported);
+        break;
+      case IClasspathEntry.CPE_VARIABLE:
+        entry = JavaCore.newVariableEntry(path, //
+            sourceAttachmentPath, //
+            sourceAttachmentRootPath, //
+            accessRulesArray, //
             attributesArray, //
             exported);
         break;

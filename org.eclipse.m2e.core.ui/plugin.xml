@@ -279,7 +279,7 @@
                 enablesFor="1"/>
       </objectContribution>
       <objectContribution id="org.eclipse.m2e.core.openAetherPomDependencyNode"
-          objectClass="org.sonatype.aether.graph.DependencyNode"
+          objectClass="org.eclipse.aether.graph.DependencyNode"
           adaptable="false">
         <action id="org.eclipse.m2e.core.ui.openPomDependency"
                 class="org.eclipse.m2e.core.ui.internal.actions.OpenPomAction"
@@ -293,6 +293,23 @@
                 class="org.eclipse.m2e.core.ui.internal.actions.OpenPomAction"
                 label="%openpomaction.label4"
                 enablesFor="1"/>
+      </objectContribution>
+      <objectContribution
+            adaptable="true"
+            id="org.eclipse.m2e.assignWorkingSet"
+            objectClass="org.eclipse.core.resources.IProject">
+         <action
+               class="org.eclipse.m2e.core.ui.internal.actions.AssignWorkingSetAction"
+               id="org.eclipse.m2e.createWorkingSet"
+               label="%action.assignWorkingSet.label"
+               menubarPath="org.eclipse.m2e.core.mavenMenu/assignWorkingSet">
+         </action>
+         <visibility>
+           <and>
+             <objectState name="open" value="true"/>
+             <objectState name="nature" value="org.eclipse.m2e.core.maven2Nature"/>
+           </and>
+         </visibility>
       </objectContribution>
    </extension>
 
@@ -351,7 +368,7 @@
             class="org.eclipse.m2e.core.ui.internal.actions.MavenPropertyTester"
             namespace="org.eclipse.m2e"
             properties="isTransitiveDependencyTreeNode,isDirectDependencyTreeNode"
-            type="org.sonatype.aether.graph.DependencyNode"/>
+            type="org.eclipse.aether.graph.DependencyNode"/>
    </extension>
 
    <extension point="org.eclipse.ui.commands">
@@ -398,7 +415,7 @@
       </page>
       <page id="org.eclipse.m2e.core.preferences.MavenInstallationsPreferencePage"
             category="org.eclipse.m2e.core.preferences.Maven2PreferencePage"
-            class="org.eclipse.m2e.core.ui.internal.preferences.MavenInstallationsPreferencePage"
+            class="org.eclipse.m2e.core.ui.internal.preferences.launch.MavenInstallationsPreferencePage"
             name="%page.installations.name">
          <keywordReference id="org.eclipse.m2e.core.maven"/>
       </page>

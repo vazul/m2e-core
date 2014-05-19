@@ -82,6 +82,8 @@ import org.eclipse.m2e.core.internal.lifecyclemapping.model.io.xpp3.LifecycleMap
 import org.eclipse.m2e.core.internal.markers.MavenProblemInfo;
 import org.eclipse.m2e.core.internal.markers.SourceLocation;
 import org.eclipse.m2e.core.internal.markers.SourceLocationHelper;
+import org.eclipse.m2e.core.internal.preferences.ProblemSeverity;
+import org.eclipse.m2e.core.internal.project.registry.EclipseWorkspaceArtifactRepository;
 import org.eclipse.m2e.core.internal.project.registry.MavenProjectFacade;
 import org.eclipse.m2e.core.lifecyclemapping.model.IPluginExecutionMetadata;
 import org.eclipse.m2e.core.lifecyclemapping.model.PluginExecutionAction;
@@ -247,8 +249,17 @@ public class LifecycleMappingFactory {
   public static List<MappingMetadataSource> getProjectMetadataSources(MavenProject mavenProject,
       List<LifecycleMappingMetadataSource> bundleMetadataSources, List<MojoExecution> mojoExecutions,
       boolean includeDefault, IProgressMonitor monitor) throws CoreException, LifecycleMappingConfigurationException {
-    List<MappingMetadataSource> metadataSources = new ArrayList<MappingMetadataSource>();
 
+    Map<String, List<MappingMetadataSource>> metadataSourcesMap = getProjectMetadataSourcesMap(mavenProject,
+        bundleMetadataSources, mojoExecutions, includeDefault, monitor);
+    return asList(metadataSourcesMap);
+  }
+
+  public static Map<String, List<MappingMetadataSource>> getProjectMetadataSourcesMap(MavenProject mavenProject,
+      List<LifecycleMappingMetadataSource> bundleMetadataSources, List<MojoExecution> mojoExecutions,
+      boolean includeDefault, IProgressMonitor monitor) throws CoreException, LifecycleMappingConfigurationException {
+
+    Map<String, List<MappingMetadataSource>> metadataSourcesMap = new HashMap<String, List<MappingMetadataSource>>();
     // List order
     // 1. preferences in project  (*** not implemented yet)
     // 2. preferences in ancestor project  (*** not implemented yet)
@@ -260,46 +271,83 @@ public class LifecycleMappingFactory {
 
     // TODO validate metadata and replace invalid entries with error mapping
 
+    List<MappingMetadataSource> metadataSources = new ArrayList<MappingMetadataSource>();
     for(LifecycleMappingMetadataSource source : getPomMappingMetadataSources(mavenProject, monitor)) {
       metadataSources.add(new SimpleMappingMetadataSource(source));
     }
+    metadataSourcesMap.put("pomMappingMetadataSources", metadataSources);
 
-    metadataSources.add(new SimpleMappingMetadataSource(getWorkspaceMetadata(false)));
+    metadataSourcesMap
+        .put(
+            "workspaceMetadataSources", //
+            Collections.singletonList((MappingMetadataSource) new SimpleMappingMetadataSource(
+                getWorkspaceMetadata(false))));
 
     // TODO filter out invalid metadata from sources contributed by eclipse extensions and the default source 
-    metadataSources.add(new SimpleMappingMetadataSource(bundleMetadataSources));
+    if(bundleMetadataSources != null) {
+      metadataSourcesMap.put("bundleMetadataSources",
+          Collections.singletonList((MappingMetadataSource) new SimpleMappingMetadataSource(bundleMetadataSources)));
+    }
+
+    metadataSources = new ArrayList<MappingMetadataSource>();
     for(LifecycleMappingMetadataSource source : getMavenPluginEmbeddedMetadataSources(mojoExecutions,
         mavenProject.getPluginArtifactRepositories(), monitor)) {
       metadataSources.add(new SimpleMappingMetadataSource(source));
     }
+    metadataSourcesMap.put("mavenPluginEmbeddedMetadataSources", metadataSources);
+
     if(includeDefault) {
       LifecycleMappingMetadataSource defaultSource = getDefaultLifecycleMappingMetadataSource();
       if(defaultSource != null) {
-        metadataSources.add(new SimpleMappingMetadataSource(defaultSource));
+        metadataSourcesMap.put("defaultLifecycleMappingMetadataSource",
+            Collections.singletonList((MappingMetadataSource) new SimpleMappingMetadataSource(defaultSource)));
       }
     }
 
+    return metadataSourcesMap;
+  }
+
+  public static List<MappingMetadataSource> asList(Map<String, List<MappingMetadataSource>> map) {
+    if(map == null || map.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<MappingMetadataSource> metadataSources = new ArrayList<MappingMetadataSource>();
+    safeAddAll(map.get("pomMappingMetadataSources"), metadataSources);
+    safeAddAll(map.get("workspaceMetadataSources"), metadataSources);
+    safeAddAll(map.get("bundleMetadataSources"), metadataSources);
+    safeAddAll(map.get("mavenPluginEmbeddedMetadataSources"), metadataSources);
+    safeAddAll(map.get("defaultLifecycleMappingMetadataSource"), metadataSources);
     return metadataSources;
+  }
+
+  private static <T> void safeAddAll(List<T> source, List<T> dest) {
+    if(source != null && dest != null)
+      dest.addAll(source);
   }
 
   private static List<LifecycleMappingMetadataSource> getMavenPluginEmbeddedMetadataSources(
       List<MojoExecution> mojoExecutions, List<ArtifactRepository> remoteRepositories, IProgressMonitor monitor) {
-    Map<File, LifecycleMappingMetadataSource> result = new LinkedHashMap<File, LifecycleMappingMetadataSource>();
 
     if(mojoExecutions == null || mojoExecutions.isEmpty()) {
       // TODO need to understand under what conditions execution plan is null here
       return Collections.emptyList();
     }
+    Map<File, LifecycleMappingMetadataSource> result = new LinkedHashMap<File, LifecycleMappingMetadataSource>();
 
     MavenImpl maven = (MavenImpl) MavenPlugin.getMaven();
 
     for(MojoExecution execution : mojoExecutions) {
       Artifact artifact;
+      // 422135 disable workspace resolution for plugin artifacts
+      boolean disabled = EclipseWorkspaceArtifactRepository.isDisabled();
+      EclipseWorkspaceArtifactRepository.setDisabled(true);
       try {
         artifact = maven.resolvePluginArtifact(execution.getPlugin(), remoteRepositories, monitor);
       } catch(CoreException e) {
         // skip this plugin, it won't run anyways
         continue;
+      } finally {
+        EclipseWorkspaceArtifactRepository.setDisabled(disabled);
       }
 
       File file = artifact.getFile();
@@ -641,15 +689,21 @@ public class LifecycleMappingFactory {
       return;
     }
 
+    ProblemSeverity notCoveredMojoExecutionSeverity = ProblemSeverity.get(MavenPlugin.getMavenConfiguration()
+        .getNotCoveredMojoExecutionSeverity());
+
+    boolean reportNotCoveredMojoExecutionProblems = !ProblemSeverity.ignore.equals(notCoveredMojoExecutionSeverity);
+
     Map<String, AbstractProjectConfigurator> configurators = new LinkedHashMap<String, AbstractProjectConfigurator>();
     for(Map.Entry<MojoExecutionKey, List<IPluginExecutionMetadata>> entry : map.entrySet()) {
       MojoExecutionKey executionKey = entry.getKey();
       List<IPluginExecutionMetadata> executionMetadatas = entry.getValue();
 
       if(executionMetadatas == null || executionMetadatas.isEmpty()) {
-        if(isInterestingPhase(executionKey.getLifecyclePhase())) {
+        if(reportNotCoveredMojoExecutionProblems && isInterestingPhase(executionKey.getLifecyclePhase())) {
           SourceLocation markerLocation = SourceLocationHelper.findLocation(mavenProject, executionKey);
-          result.addProblem(new NotCoveredMojoExecution(executionKey, markerLocation));
+          result.addProblem(new NotCoveredMojoExecution(executionKey, notCoveredMojoExecutionSeverity.getSeverity(),
+              markerLocation));
         }
         continue;
       }
@@ -683,7 +737,10 @@ public class LifecycleMappingFactory {
               log.debug("Could not instantiate project configurator {}.", configuratorId, e);
               SourceLocation markerLocation = SourceLocationHelper.findLocation(mavenProject, executionKey);
               result.addProblem(new MissingConfiguratorProblemInfo(configuratorId, markerLocation));
-              result.addProblem(new NotCoveredMojoExecution(executionKey, markerLocation));
+              if(reportNotCoveredMojoExecutionProblems) {
+                result.addProblem(new NotCoveredMojoExecution(executionKey, notCoveredMojoExecutionSeverity
+                    .getSeverity(), markerLocation));
+              }
             }
             break;
           case ignore:

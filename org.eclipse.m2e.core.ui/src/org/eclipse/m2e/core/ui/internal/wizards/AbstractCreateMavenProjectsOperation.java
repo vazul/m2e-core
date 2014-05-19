@@ -1,9 +1,13 @@
 /*******************************************************************************
- * Copyright (c) 2008 Sonatype, Inc.
+ * Copyright (c) 2008-2013 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Contributors:
+ *      Sonatype, Inc. - initial API and implementation
+ *      Red Hat, Inc. - Return created projects
  *******************************************************************************/
 
 package org.eclipse.m2e.core.ui.internal.wizards;
@@ -15,7 +19,6 @@ import java.util.List;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -26,6 +29,7 @@ import org.eclipse.ui.IWorkingSet;
 
 import org.eclipse.m2e.core.project.IMavenProjectImportResult;
 import org.eclipse.m2e.core.ui.internal.M2EUIPluginActivator;
+import org.eclipse.m2e.core.ui.internal.WorkingSets;
 
 
 public abstract class AbstractCreateMavenProjectsOperation implements IRunnableWithProgress {
@@ -36,24 +40,9 @@ public abstract class AbstractCreateMavenProjectsOperation implements IRunnableW
     this.workingSets = workingSets;
   }
 
-  protected abstract List<IProject> doCreateMavenProjects(IProgressMonitor monitor) throws CoreException;
+  private List<IProject> createdProjects;
 
-  // PlatformUI.getWorkbench().getWorkingSetManager().addToWorkingSets(project, new IWorkingSet[] {workingSet});
-  public static void addToWorkingSets(IProject project, List<IWorkingSet> workingSets) {
-    if(workingSets != null && workingSets.size() > 0) {
-      // IAdaptable[] elements = workingSet.adaptElements(new IAdaptable[] {project});
-      // if(elements.length == 1) {
-      for(IWorkingSet workingSet : workingSets) {
-        if(workingSet != null) {
-          IAdaptable[] oldElements = workingSet.getElements();
-          IAdaptable[] newElements = new IAdaptable[oldElements.length + 1];
-          System.arraycopy(oldElements, 0, newElements, 0, oldElements.length);
-          newElements[oldElements.length] = project;
-          workingSet.setElements(newElements);
-        }
-      }
-    }
-  }
+  protected abstract List<IProject> doCreateMavenProjects(IProgressMonitor monitor) throws CoreException;
 
   protected static ArrayList<IProject> toProjects(List<IMavenProjectImportResult> results) {
     ArrayList<IProject> projects = new ArrayList<IProject>();
@@ -69,14 +58,9 @@ public abstract class AbstractCreateMavenProjectsOperation implements IRunnableW
     ISchedulingRule rule = ResourcesPlugin.getWorkspace().getRoot();
     Job.getJobManager().beginRule(rule, monitor);
     try {
-      List<IProject> projects;
       try {
-        projects = doCreateMavenProjects(monitor);
-        if(projects != null) {
-          for(IProject project : projects) {
-            addToWorkingSets(project, workingSets);
-          }
-        }
+        this.createdProjects = doCreateMavenProjects(monitor);
+        WorkingSets.addToWorkingSets(createdProjects, workingSets);
       } catch(CoreException e) {
         throw new InvocationTargetException(e);
       }
@@ -92,4 +76,14 @@ public abstract class AbstractCreateMavenProjectsOperation implements IRunnableW
     }
     return new Status(IStatus.ERROR, M2EUIPluginActivator.PLUGIN_ID, t.getMessage(), t);
   }
+
+  /**
+   * Returns a list of {@link IProject}s created by this operation.
+   * 
+   * @since 1.5.0
+   */
+  public List<IProject> getCreatedProjects() {
+    return createdProjects;
+  }
+
 }

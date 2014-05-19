@@ -50,6 +50,7 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     this.mavenConfiguration = mavenConfiguration;
   }
 
+  @Override
   public void addMarkers(IResource pomResource, String type, MavenExecutionResult result) {
     SourceLocation defaultSourceLocation = new SourceLocation(1, 0, 0);
     List<MavenProblemInfo> allProblems = new ArrayList<MavenProblemInfo>();
@@ -61,7 +62,7 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     if(resolutionResult != null) {
       allProblems
           .addAll(toMavenProblemInfos(pomResource, defaultSourceLocation, resolutionResult.getCollectionErrors()));
-      for(org.sonatype.aether.graph.Dependency dependency : resolutionResult.getUnresolvedDependencies()) {
+      for(org.eclipse.aether.graph.Dependency dependency : resolutionResult.getUnresolvedDependencies()) {
         List<Exception> exceptions = resolutionResult.getResolutionErrors(dependency);
         if(exceptions != null && exceptions.size() > 0) {
           SourceLocation sourceLocation = SourceLocationHelper.findLocation(mavenProject, dependency);
@@ -77,9 +78,7 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     addErrorMarkers(pomResource, type, allProblems);
   }
 
-  /* (non-Javadoc)
-   * @see org.eclipse.m2e.core.project.IMavenMarkerManager#addMarker(org.eclipse.core.resources.IResource, java.lang.String, int, int)
-   */
+  @Override
   public IMarker addMarker(IResource resource, String type, String message, int lineNumber, int severity) {
     return addMarker(resource, type, message, lineNumber, severity, false /*isTransient*/);
   }
@@ -191,8 +190,8 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     }
 
     for(Throwable ex : exceptions) {
-      if(ex instanceof org.sonatype.aether.transfer.ArtifactNotFoundException) {
-        org.sonatype.aether.transfer.ArtifactNotFoundException artifactNotFoundException = (org.sonatype.aether.transfer.ArtifactNotFoundException) ex;
+      if(ex instanceof org.eclipse.aether.transfer.ArtifactNotFoundException) {
+        org.eclipse.aether.transfer.ArtifactNotFoundException artifactNotFoundException = (org.eclipse.aether.transfer.ArtifactNotFoundException) ex;
         ArtifactNotFoundProblemInfo problem = new ArtifactNotFoundProblemInfo(artifactNotFoundException.getArtifact(),
             mavenConfiguration.isOffline(), location);
         result.add(problem);
@@ -222,16 +221,19 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     return result;
   }
 
+  @Override
   public void deleteMarkers(IResource resource, String type) throws CoreException {
     deleteMarkers(resource, true /*includeSubtypes*/, type);
   }
 
+  @Override
   public void deleteMarkers(IResource resource, boolean includeSubtypes, String type) throws CoreException {
     if(resource != null && resource.exists()) {
       resource.deleteMarkers(type, includeSubtypes, IResource.DEPTH_INFINITE);
     }
   }
 
+  @Override
   public void deleteMarkers(IResource resource, String type, String attrName, String attrValue) throws CoreException {
     if(resource == null || !resource.exists()) {
       return;
@@ -250,7 +252,7 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     Set<Artifact> artifacts = mavenProject.getArtifacts();
     all_artifacts_loop: for(Artifact mavenArtifact : artifacts) {
       if(!mavenArtifact.isResolved()) {
-        org.sonatype.aether.artifact.Artifact artifact = RepositoryUtils.toArtifact(mavenArtifact);
+        org.eclipse.aether.artifact.Artifact artifact = RepositoryUtils.toArtifact(mavenArtifact);
         for(MavenProblemInfo problem : knownProblems) {
           if(problem instanceof ArtifactNotFoundProblemInfo) {
             ArtifactNotFoundProblemInfo artifactNotFoundProblemInfo = (ArtifactNotFoundProblemInfo) problem;
@@ -265,7 +267,8 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     }
   }
 
-  public void addErrorMarkers(IResource resource, String type, Exception ex) {
+  @Override
+  public void addErrorMarkers(IResource resource, String type, Throwable ex) {
     Throwable cause = getRootCause(ex);
     if(cause instanceof CoreException) {
       CoreException cex = (CoreException) cause;
@@ -284,12 +287,19 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     }
   }
 
+  @Override
+  public void addErrorMarkers(IResource resource, String type, Exception ex) {
+    addErrorMarkers(resource, type, (Throwable) ex);
+  }
+
+  @Override
   public void addErrorMarkers(IResource resource, String type, List<MavenProblemInfo> problems) {
     for(MavenProblemInfo problem : problems) {
       addErrorMarker(resource, type, problem);
     }
   }
 
+  @Override
   public void addErrorMarker(IResource resource, String type, MavenProblemInfo problem) {
     IMarker marker = addMarker(resource, type, problem.getMessage(), problem.getLocation().getLineNumber(),
         problem.getSeverity());
@@ -301,7 +311,7 @@ public class MavenMarkerManager implements IMavenMarkerManager {
     MarkerUtils.decorateMarker(marker);
   }
 
-  private static boolean equals(org.sonatype.aether.artifact.Artifact a1, org.sonatype.aether.artifact.Artifact a2) {
+  private static boolean equals(org.eclipse.aether.artifact.Artifact a1, org.eclipse.aether.artifact.Artifact a2) {
     if(a1 == a2) {
       return true;
     }

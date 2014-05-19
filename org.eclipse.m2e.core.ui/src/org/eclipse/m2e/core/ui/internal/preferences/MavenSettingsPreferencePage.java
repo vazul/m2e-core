@@ -28,6 +28,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
@@ -57,6 +58,8 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 
+import org.codehaus.plexus.util.StringUtils;
+
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.settings.Settings;
@@ -65,8 +68,6 @@ import org.apache.maven.settings.building.SettingsProblem;
 import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.embedder.IMaven;
 import org.eclipse.m2e.core.embedder.IMavenConfiguration;
-import org.eclipse.m2e.core.embedder.MavenRuntime;
-import org.eclipse.m2e.core.embedder.MavenRuntimeManager;
 import org.eclipse.m2e.core.internal.index.IndexManager;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.MavenUpdateRequest;
@@ -81,13 +82,11 @@ import org.eclipse.m2e.core.ui.internal.Messages;
 public class MavenSettingsPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
   private static final Logger log = LoggerFactory.getLogger(MavenSettingsPreferencePage.class);
 
-  final MavenRuntimeManager runtimeManager;
-
   final IMavenConfiguration mavenConfiguration;
 
   final IMaven maven;
 
-  MavenRuntime defaultRuntime;
+  Text globalSettingsText;
 
   Text userSettingsText;
 
@@ -95,12 +94,13 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
 
   boolean dirty = false;
 
+  private Link globalSettingsLink;
+
   private Link userSettingsLink;
 
   public MavenSettingsPreferencePage() {
-    setTitle(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_title);
+    setTitle(Messages.MavenSettingsPreferencePage_title);
 
-    this.runtimeManager = MavenPlugin.getMavenRuntimeManager();
     this.mavenConfiguration = MavenPlugin.getMavenConfiguration();
     this.maven = MavenPlugin.getMaven();
   }
@@ -108,9 +108,6 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
   public void init(IWorkbench workbench) {
   }
 
-  /* (non-Javadoc)
-   * @see org.eclipse.jface.dialogs.DialogPage#setVisible(boolean)
-   */
   public void setVisible(boolean visible) {
     super.setVisible(visible);
     if(visible) {
@@ -118,43 +115,53 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
     }
   }
 
-  protected void performDefaults() {
-    userSettingsText.setText(MavenCli.DEFAULT_USER_SETTINGS_FILE.getAbsolutePath());
-    setDirty(true);
-    updateLocalRepository();
-    super.performDefaults();
-  }
-
   protected void updateSettings(final boolean updateMavenDependencies) {
     final String userSettings = getUserSettings();
+    final String globalSettings = getGlobalSettings();
 
-    new Job(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_job_updating) {
+    String currentGlobalSettings = mavenConfiguration.getGlobalSettingsFile();
+    String currentUserSettings = mavenConfiguration.getUserSettingsFile();
+    if(StringUtils.equals(globalSettings, currentGlobalSettings)
+        && StringUtils.equals(currentUserSettings, userSettings)) {
+      return;
+    }
+
+    final Boolean[] updateProjects = new Boolean[1];
+    updateProjects[0] = updateMavenDependencies;
+    if(updateMavenDependencies) {
+      IMavenProjectFacade[] projects = MavenPlugin.getMavenProjectRegistry().getProjects();
+      if(projects != null && projects.length > 0) {
+        updateProjects[0] = MessageDialog.openQuestion(getShell(),
+            Messages.MavenPreferencePage_updateProjectRequired_title,
+            Messages.MavenProjectPreferencePage_dialog_message);
+      }
+    }
+
+    new Job(Messages.MavenSettingsPreferencePage_job_updating) {
       protected IStatus run(IProgressMonitor monitor) {
         try {
           final File localRepositoryDir = new File(maven.getLocalRepository().getBasedir());
 
           // this clears cached settings.xml instance
-          if(userSettings.length() > 0) {
-            mavenConfiguration.setUserSettingsFile(userSettings);
-          } else {
-            mavenConfiguration.setUserSettingsFile(null);
-          }
+          mavenConfiguration.setGlobalSettingsFile(globalSettings);
+          mavenConfiguration.setUserSettingsFile(userSettings);
 
           File newRepositoryDir = new File(maven.getLocalRepository().getBasedir());
           if(!newRepositoryDir.equals(localRepositoryDir)) {
             IndexManager indexManager = MavenPlugin.getIndexManager();
             indexManager.getWorkspaceIndex().updateIndex(true, monitor);
           }
-          if(updateMavenDependencies) {
+          if(updateProjects[0]) {
             IMavenProjectFacade[] projects = MavenPlugin.getMavenProjectRegistry().getProjects();
             ArrayList<IProject> allProjects = new ArrayList<IProject>();
-            if(projects != null) {
+            if(projects != null && projects.length > 0) {
               MavenPlugin.getMaven().reloadSettings();
+
               SubProgressMonitor subMonitor = new SubProgressMonitor(monitor, projects.length);
               for(int i = 0; i < projects.length; i++ ) {
-                subMonitor.beginTask(NLS.bind(
-                    org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_task_updating, projects[i]
-                        .getProject().getName()), 1);
+                subMonitor
+                    .beginTask(NLS.bind(Messages.MavenSettingsPreferencePage_task_updating, projects[i].getProject()
+                        .getName()), 1);
                 allProjects.add(projects[i].getProject());
               }
               MavenPlugin.getMavenProjectRegistry().refresh(
@@ -171,57 +178,100 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
     }.schedule();
   }
 
-  protected void performApply() {
-    if(dirty) {
-      updateSettings(false);
-    }
+  @Override
+  protected void performDefaults() {
+    globalSettingsText.setText("");
+    userSettingsText.setText("");
+    checkSettings();
+    updateLocalRepository();
+    super.performDefaults();
   }
 
+  @Override
   public boolean performOk() {
-    if(dirty) {
-      updateSettings(false);
-    }
+    updateSettings(true);
     return true;
-  }
-
-  public void setDirty(boolean dirty) {
-    this.dirty = dirty;
-  }
-
-  public boolean isDirty() {
-    return this.dirty;
   }
 
   protected Control createContents(Composite parent) {
     Composite composite = new Composite(parent, SWT.NONE);
-    GridLayout gridLayout = new GridLayout(4, false);
-    gridLayout.marginBottom = 5;
-    gridLayout.marginRight = 5;
-    gridLayout.marginHeight = 0;
-    gridLayout.marginWidth = 0;
-    composite.setLayout(gridLayout);
+    composite.setLayout(new GridLayout(2, false));
 
-    createUserSettings(composite);
+    globalSettingsLink = new Link(composite, SWT.NONE);
+    globalSettingsLink.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+    globalSettingsLink.setText(Messages.MavenSettingsPreferencePage_globalSettingslink2);
+    globalSettingsLink.setToolTipText(Messages.MavenSettingsPreferencePage_globalSettingslink_tooltip);
+    globalSettingsLink.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        String globalSettings = getGlobalSettings();
+        if(globalSettings != null) {
+          openEditor(globalSettings);
+        }
+      }
+    });
+
+    globalSettingsText = new Text(composite, SWT.BORDER);
+    globalSettingsText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+
+    Button globalSettingsBrowseButton = new Button(composite, SWT.NONE);
+    globalSettingsBrowseButton.setText(Messages.MavenSettingsPreferencePage_globalSettingsBrowseButton_text);
+    globalSettingsBrowseButton.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        browseSettingsAction(globalSettingsText);
+      }
+    });
+
+    userSettingsLink = new Link(composite, SWT.NONE);
+    userSettingsLink.setText(Messages.MavenSettingsPreferencePage_userSettingslink2);
+    userSettingsLink.setToolTipText(Messages.MavenSettingsPreferencePage_userSettingslink_tooltip);
+    userSettingsLink.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+    userSettingsLink.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        String userSettings = getUserSettings();
+        if(userSettings == null) {
+          userSettings = MavenCli.DEFAULT_USER_SETTINGS_FILE.getAbsolutePath();
+        }
+        openEditor(userSettings);
+      }
+    });
+    userSettingsText = new Text(composite, SWT.BORDER);
+    userSettingsText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+    userSettingsText.setMessage(MavenCli.DEFAULT_USER_SETTINGS_FILE.getAbsolutePath());
+
+    Button userSettingsBrowseButton = new Button(composite, SWT.NONE);
+    userSettingsBrowseButton.setLayoutData(new GridData(SWT.FILL, SWT.RIGHT, false, false, 1, 1));
+    userSettingsBrowseButton.setText(Messages.MavenSettingsPreferencePage_userSettingsBrowseButton_text);
+    userSettingsBrowseButton.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        browseSettingsAction(userSettingsText);
+      }
+    });
+
+    Button updateSettings = new Button(composite, SWT.NONE);
+    updateSettings.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
+    updateSettings.setText(Messages.MavenSettingsPreferencePage_btnUpdate);
+    updateSettings.addSelectionListener(new SelectionAdapter() {
+      public void widgetSelected(SelectionEvent e) {
+        updateSettings(true);
+      }
+    });
     Label localRepositoryLabel = new Label(composite, SWT.NONE);
-    GridData gd = new GridData(SWT.FILL, SWT.CENTER, true, false, 4, 1);
+    GridData gd = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
     gd.verticalIndent = 25;
     localRepositoryLabel.setLayoutData(gd);
-    localRepositoryLabel.setText(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_lblLocal);
+    localRepositoryLabel.setText(Messages.MavenSettingsPreferencePage_lblLocal);
 
     localRepositoryText = new Text(composite, SWT.READ_ONLY | SWT.BORDER);
-    localRepositoryText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1));
+    localRepositoryText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
     localRepositoryText.setData("name", "localRepositoryText"); //$NON-NLS-1$ //$NON-NLS-2$
     localRepositoryText.setEditable(false);
     Button reindexButton = new Button(composite, SWT.NONE);
     reindexButton.setLayoutData(new GridData(SWT.FILL, SWT.RIGHT, false, false, 1, 1));
     reindexButton.setText(Messages.preferencesReindexButton);
     reindexButton.addSelectionListener(new SelectionAdapter() {
-
-      /* (non-Javadoc)
-       * @see org.eclipse.swt.events.SelectionAdapter#widgetSelected(org.eclipse.swt.events.SelectionEvent)
-       */
+      @Override
       public void widgetSelected(SelectionEvent e) {
-        new WorkspaceJob(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_job_indexing) {
+        new WorkspaceJob(Messages.MavenSettingsPreferencePage_job_indexing) {
           public IStatus runInWorkspace(IProgressMonitor monitor) throws CoreException {
             IndexManager indexManager = MavenPlugin.getIndexManager();
             indexManager.getWorkspaceIndex().updateIndex(true, monitor);
@@ -230,101 +280,56 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
         }.schedule();
       }
     });
-    defaultRuntime = runtimeManager.getDefaultRuntime();
 
-    String userSettings = mavenConfiguration.getUserSettingsFile();
-    if(userSettings == null || userSettings.length() == 0) {
-      userSettingsText.setText(MavenCli.DEFAULT_USER_SETTINGS_FILE.getAbsolutePath());
-    } else {
-      userSettingsText.setText(userSettings);
-    }
-
-    checkSettings();
-    updateLocalRepository();
-
-    userSettingsText.addModifyListener(new ModifyListener() {
+    ModifyListener settingsModifyListener = new ModifyListener() {
       public void modifyText(ModifyEvent modifyevent) {
         updateLocalRepository();
         checkSettings();
-        setDirty(true);
       }
-    });
+    };
+    userSettingsText.addModifyListener(settingsModifyListener);
+    globalSettingsText.addModifyListener(settingsModifyListener);
+
+    String globalSettings = mavenConfiguration.getGlobalSettingsFile();
+    if(globalSettings != null) {
+      globalSettingsText.setText(globalSettings);
+    }
+    String userSettings = mavenConfiguration.getUserSettingsFile();
+    if(userSettings != null) {
+      userSettingsText.setText(userSettings);
+    }
+    checkSettings();
+    updateLocalRepository();
 
     return composite;
   }
 
-  public void updateSettingsLink(boolean active) {
-    String text = org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_link1;
+  private void updateUserSettingsLink(String userSettings) {
+    File userSettingsFile = MavenCli.DEFAULT_USER_SETTINGS_FILE;
+    if(userSettings != null) {
+      userSettingsFile = new File(userSettings);
+    }
+    boolean active = userSettingsFile.canRead();
+
+    String text = Messages.MavenSettingsPreferencePage_userSettingslink1;
     if(active) {
-      text = org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_link2;
+      text = Messages.MavenSettingsPreferencePage_userSettingslink2;
     }
     userSettingsLink.setText(text);
   }
 
-  /**
-   * @param composite
-   */
-  private void createUserSettings(Composite composite) {
-
-    userSettingsLink = new Link(composite, SWT.NONE);
-    userSettingsLink.setData("name", "userSettingsLink"); //$NON-NLS-1$ //$NON-NLS-2$
-    userSettingsLink.setText(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_link2);
-    userSettingsLink.setToolTipText(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_link_tooltip);
-    GridData gd_userSettingsLabel = new GridData(SWT.FILL, SWT.CENTER, true, false, 4, 1);
-
-    gd_userSettingsLabel.verticalIndent = 15;
-    userSettingsLink.setLayoutData(gd_userSettingsLabel);
-    userSettingsLink.addSelectionListener(new SelectionAdapter() {
-      public void widgetSelected(SelectionEvent e) {
-        String userSettings = getUserSettings();
-        if(userSettings.length() == 0) {
-          userSettings = MavenCli.DEFAULT_USER_SETTINGS_FILE.getAbsolutePath();
-        }
-        openEditor(userSettings);
-      }
-    });
-    userSettingsText = new Text(composite, SWT.BORDER);
-    userSettingsText.setData("name", "userSettingsText"); //$NON-NLS-1$ //$NON-NLS-2$
-    GridData gd_userSettingsText = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
-    gd_userSettingsText.verticalIndent = 5;
-    gd_userSettingsText.widthHint = 100;
-    userSettingsText.setLayoutData(gd_userSettingsText);
-
-    Button userSettingsBrowseButton = new Button(composite, SWT.NONE);
-    GridData gd_userSettingsBrowseButton = new GridData(SWT.FILL, SWT.RIGHT, false, false, 1, 1);
-
-    userSettingsBrowseButton.setLayoutData(gd_userSettingsBrowseButton);
-    userSettingsBrowseButton.setText(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_btnBrowse);
-    userSettingsBrowseButton.addSelectionListener(new SelectionAdapter() {
-      public void widgetSelected(SelectionEvent e) {
-        FileDialog dialog = new FileDialog(getShell(), SWT.OPEN);
-        if(getUserSettings().length() > 0) {
-          dialog.setFileName(getUserSettings());
-        }
-        String file = dialog.open();
-        if(file != null) {
-          file = file.trim();
-          if(file.length() > 0) {
-            userSettingsText.setText(file);
-            updateLocalRepository();
-            checkSettings();
-          }
-        }
-      }
-    });
-
-    Button updateSettings = new Button(composite, SWT.NONE);
-    updateSettings.setText(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_btnUpdate);
-    updateSettings.addSelectionListener(new SelectionAdapter() {
-      public void widgetSelected(SelectionEvent e) {
-        updateSettings(true);
-      }
-    });
+  private void updateGlobalSettingsLink(String globalSettings) {
+    boolean active = globalSettings != null && new File(globalSettings).canRead();
+    String text = Messages.MavenSettingsPreferencePage_globalSettingslink1;
+    if(active) {
+      text = Messages.MavenSettingsPreferencePage_globalSettingslink2;
+    }
+    globalSettingsLink.setText(text);
   }
 
   protected void updateLocalRepository() {
+    final String globalSettings = getGlobalSettings();
     final String userSettings = getUserSettings();
-    String globalSettings = runtimeManager.getGlobalSettingsFile();
     try {
       Settings settings = maven.buildSettings(globalSettings, userSettings);
       String localRepository = settings.getLocalRepository();
@@ -342,28 +347,39 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
   protected void checkSettings() {
     setErrorMessage(null);
     setMessage(null);
-    boolean fileExists = false;
+
+    // NB: enable/disable links regardless of validation errors
+
+    String globalSettings = getGlobalSettings();
+    updateGlobalSettingsLink(globalSettings);
+
     String userSettings = getUserSettings();
-    if(userSettings != null && userSettings.length() > 0) {
-      File userSettingsFile = new File(userSettings);
-      if(!userSettingsFile.exists()) {
-        setMessage(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_error_missing,
-            IMessageProvider.WARNING);
-        userSettings = null;
+    updateUserSettingsLink(userSettings);
 
-      } else {
-        fileExists = true;
-      }
-
-    } else {
-      userSettings = null;
+    if(globalSettings != null
+        && !checkSettings(globalSettings, Messages.MavenSettingsPreferencePage_error_globalSettingsMissing,
+            Messages.MavenSettingsPreferencePage_error_globalSettingsParse)) {
+      return;
     }
-    updateSettingsLink(fileExists);
-    List<SettingsProblem> result = maven.validateSettings(userSettings);
+
+    if(userSettings != null
+        && !checkSettings(userSettings, Messages.MavenSettingsPreferencePage_error_userSettingsMissing,
+            Messages.MavenSettingsPreferencePage_error_userSettingsParse)) {
+      return;
+    }
+  }
+
+  private boolean checkSettings(String location, String errorMissing, String errorParse) {
+    if(!new File(location).canRead()) {
+      setMessage(errorMissing, IMessageProvider.WARNING);
+      return false;
+    }
+    List<SettingsProblem> result = maven.validateSettings(location);
     if(result.size() > 0) {
-      setMessage(NLS.bind(org.eclipse.m2e.core.ui.internal.Messages.MavenSettingsPreferencePage_error_parse, result
-          .get(0).getMessage()), IMessageProvider.WARNING);
+      setMessage(NLS.bind(errorParse, result.get(0).getMessage()), IMessageProvider.WARNING);
+      return false;
     }
+    return true;
   }
 
   void openEditor(final String fileName) {
@@ -389,6 +405,31 @@ public class MavenSettingsPreferencePage extends PreferencePage implements IWork
   }
 
   String getUserSettings() {
-    return userSettingsText.getText().trim();
+    return getSettings(userSettingsText);
+  }
+
+  String getGlobalSettings() {
+    return getSettings(globalSettingsText);
+  }
+
+  private String getSettings(Text settings) {
+    String location = settings.getText().trim();
+    return location.length() > 0 ? location : null;
+  }
+
+  protected void browseSettingsAction(Text settings) {
+    FileDialog dialog = new FileDialog(getShell(), SWT.OPEN);
+    if(settings.getText().trim().length() > 0) {
+      dialog.setFileName(settings.getText());
+    }
+    String file = dialog.open();
+    if(file != null) {
+      file = file.trim();
+      if(file.length() > 0) {
+        settings.setText(file);
+        updateLocalRepository();
+        checkSettings();
+      }
+    }
   }
 }

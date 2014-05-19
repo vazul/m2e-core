@@ -13,7 +13,7 @@
   <parent>
     <groupId>org.eclipse.m2e</groupId>
     <artifactId>m2e-maven-runtime</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>org.eclipse.m2e.maven.runtime</artifactId>
@@ -23,77 +23,46 @@
 
   <properties>
     <!-- maven core version -->
-    <maven.version>3.0.4</maven.version>
-
-    <!-- the following MUST match <maven.version/> above. I wish I could make scope=import do this for me -->
-    <sisu-guice.version>3.1.0</sisu-guice.version>
-    <sisu.version>2.3.0</sisu.version>
-    <aether.version>1.13.1</aether.version>
-
-    <guava.version>10.0.1</guava.version>
-
+    <maven.version>3.2.1</maven.version>
+    <guava.version>14.0.1</guava.version>
     <!-- below are m2e-specific addons -->
     <plexus-build-api.version>0.0.7</plexus-build-api.version>
-    <wagon-ahc.version>1.2.1</wagon-ahc.version>
+    <okhttp-connector.version>0.12.0</okhttp-connector.version>
+    <concurrent-localrepo.version>0.9.0</concurrent-localrepo.version>
   </properties>
 
   <dependencies>
+    <!-- this overrides default local repo implementation and must be BEFORE maven -->
+    <dependency>
+      <groupId>io.takari.aether</groupId>
+      <artifactId>takari-local-repository</artifactId>
+      <version>${concurrent-localrepo.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
-      <exclusions>
-        <exclusion>
-          <!-- exclude aggregate OSGi bundle -->
-          <artifactId>sisu-inject-plexus</artifactId>
-          <groupId>org.sonatype.sisu</groupId>
-        </exclusion>
-      </exclusions>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-embedder</artifactId>
-      <exclusions>
-        <exclusion>
-          <artifactId>sisu-inject-plexus</artifactId>
-          <groupId>org.sonatype.sisu</groupId>
-        </exclusion>
-      </exclusions>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-compat</artifactId>
-      <exclusions>
-        <exclusion>
-          <artifactId>sisu-inject-plexus</artifactId>
-          <groupId>org.sonatype.sisu</groupId>
-        </exclusion>
-      </exclusions>
+      <optional>true</optional>
     </dependency>
 
     <dependency>
-      <groupId>org.sonatype.sisu.inject</groupId>
-      <artifactId>guice-plexus-shim</artifactId>
-      <version>${sisu.version}</version>
+      <groupId>org.eclipse.sisu</groupId>
+      <artifactId>org.eclipse.sisu.plexus</artifactId>
       <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.sonatype.sisu</groupId>
-          <artifactId>sisu-guice</artifactId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jsr250-api</artifactId>
-          <groupId>javax.annotation</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>cdi-api</artifactId>
-          <groupId>javax.enterprise</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.sonatype.sisu</groupId>
       <artifactId>sisu-guice</artifactId>
-      <version>${sisu-guice.version}</version>
       <classifier>no_aop</classifier>
       <optional>true</optional>
       <exclusions>
@@ -110,6 +79,7 @@
       <exclusions>
         <exclusion>
           <!-- as of version 1.3.9 includes LGPL'ed sources, can't ship with an EPL project  -->
+          <!--  http://dev.eclipse.org/ipzilla/show_bug.cgi?id=7302 -->
           <groupId>com.google.code.findbugs</groupId>
           <artifactId>jsr305</artifactId>
         </exclusion>
@@ -124,48 +94,27 @@
     </dependency>
 
     <dependency>
-      <groupId>org.sonatype.aether</groupId>
-      <artifactId>aether-connector-wagon</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-        <exclusion>
-          <artifactId>sisu-inject-plexus</artifactId>
-          <groupId>org.sonatype.sisu</groupId>
-        </exclusion>
-      </exclusions>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.sonatype.aether</groupId>
+      <groupId>org.eclipse.aether</groupId>
       <artifactId>aether-impl</artifactId>
       <optional>true</optional>
     </dependency>
+
     <dependency>
-      <groupId>org.sonatype.aether</groupId>
-      <artifactId>aether-connector-asynchttpclient</artifactId>
-      <version>${aether.version}</version>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>com.ning</groupId>
-          <artifactId>async-http-client</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.sonatype.maven</groupId>
-      <artifactId>wagon-ahc</artifactId>
-      <version>${wagon-ahc.version}</version>
-      <optional>true</optional>
+      <!-- TODO remember to remove io.tesla.* bnd rule -->
+      <groupId>io.takari.aether</groupId>
+      <artifactId>aether-connector-okhttp</artifactId>
+      <version>${okhttp-connector.version}</version>
     </dependency>
 
-   <dependency>
-     <groupId>org.apache.maven.wagon</groupId>
-     <artifactId>wagon-file</artifactId>
-   </dependency>
+    <dependency>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-connector-wagon</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.maven.wagon</groupId>
+      <artifactId>wagon-file</artifactId>
+    </dependency>
   </dependencies>
 
   <dependencyManagement>
@@ -180,7 +129,6 @@
     </dependencies>
   </dependencyManagement>
 
-
   <build>
     <plugins>
       <plugin>
@@ -189,27 +137,30 @@
         <configuration>
           <instructions>
             <Embed-Dependency>
-              *;scope=compile|runtime;artifactId=!aopalliance|apache-maven|async-http-client|netty|slf4j-api
+              *;scope=compile|runtime;artifactId=!aopalliance|apache-maven|slf4j-api
             </Embed-Dependency>
             <Embed-Directory>jars</Embed-Directory>
 
             <_exportcontents>
               META-INF.plexus;-noimport:=true,
+              META-INF.sisu;-noimport:=true,
               org.apache.maven.*,
               org.codehaus.plexus.*,
               org.sonatype.plexus.*,
-              org.sonatype.aether.*,
+              org.eclipse.aether.*,
               com.google.inject.*,
               javax.inject.*,
-              org.sonatype.maven.wagon.*,
+              com.squareup.okhttp.*,
+              io.tesla.*,
+              io.takari.*,
             </_exportcontents>
 
             <Import-Package>
               !*
             </Import-Package>
             <Require-Bundle>
-              com.ning.async-http-client;bundle-version="[1.6.5,1.6.6)",
-              org.slf4j.api;bundle-version="1.6.2"
+              org.slf4j.api;bundle-version="1.6.2",
+              org.eclipse.m2e.maven.runtime.slf4j.simple;bundle-version="[1.5.0,1.6.0)"
             </Require-Bundle>
 
             <Bundle-ClassPath>.,{maven-dependencies}</Bundle-ClassPath>

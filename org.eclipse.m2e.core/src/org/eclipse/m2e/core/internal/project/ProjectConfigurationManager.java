@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 Sonatype, Inc.
+ * Copyright (c) 2008-2014 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -33,7 +33,6 @@ import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IResource;
@@ -75,11 +74,11 @@ import org.eclipse.m2e.core.embedder.MavenModelManager;
 import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.internal.MavenPluginActivator;
 import org.eclipse.m2e.core.internal.Messages;
-import org.eclipse.m2e.core.internal.archetype.ArchetypeCatalogFactory.RemoteCatalogFactory;
-import org.eclipse.m2e.core.internal.archetype.ArchetypeManager;
+import org.eclipse.m2e.core.internal.embedder.AbstractRunnable;
 import org.eclipse.m2e.core.internal.embedder.MavenExecutionContext;
 import org.eclipse.m2e.core.internal.lifecyclemapping.LifecycleMappingFactory;
 import org.eclipse.m2e.core.internal.markers.IMavenMarkerManager;
+import org.eclipse.m2e.core.internal.preferences.ProblemSeverity;
 import org.eclipse.m2e.core.internal.project.registry.ProjectRegistryManager;
 import org.eclipse.m2e.core.project.IMavenProjectChangedListener;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
@@ -138,8 +137,11 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
         ArrayList<IMavenProjectImportResult> result = new ArrayList<IMavenProjectImportResult>();
         ArrayList<IProject> projects = new ArrayList<IProject>();
 
+        int total = projectInfos.size();
+        int i = 0;
         // first, create all projects with basic configuration
         for(MavenProjectInfo projectInfo : projectInfos) {
+          long t11 = System.currentTimeMillis();
           if(monitor.isCanceled()) {
             throw new OperationCanceledException();
           }
@@ -151,6 +153,8 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
 
           if(project != null) {
             projects.add(project);
+            long importTime = System.currentTimeMillis() - t11;
+            log.debug("Imported project {} ({}/{}) in {} ms", project.getName(), ++i, total, importTime);
           }
         }
 
@@ -159,7 +163,7 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
         configureNewMavenProjects(projects, progress.newChild(90));
 
         long t2 = System.currentTimeMillis();
-        log.info("Project import completed " + ((t2 - t1) / 1000) + " sec");
+        log.info("Imported and configured {} project(s) in {} sec", total, ((t2 - t1) / 1000));
 
         return result;
       }
@@ -213,6 +217,7 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
       pomFiles.add(project.getFile(IMavenConstants.POM_FILE_NAME));
     }
     progress.subTask(Messages.ProjectConfigurationManager_task_refreshing);
+
     projectManager.refresh(pomFiles, progress.newChild(75));
 
     // TODO this emits project change events, which may be premature at this point
@@ -483,15 +488,19 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
         "Updated project configuration for {} in {} ms.", mavenProjectFacade.toString(), System.currentTimeMillis() - start); //$NON-NLS-1$
   }
 
-  public void enableMavenNature(final IProject project, ResolverConfiguration configuration,
+  public void enableMavenNature(final IProject project, final ResolverConfiguration configuration,
       final IProgressMonitor monitor) throws CoreException {
     monitor.subTask(Messages.ProjectConfigurationManager_task_enable_nature);
-    enableBasicMavenNature(project, configuration, monitor);
-    configureNewMavenProjects(Collections.singletonList(project), monitor);
+    maven.execute(new AbstractRunnable() {
+      protected void run(IMavenExecutionContext context, IProgressMonitor monitor) throws CoreException {
+        enableBasicMavenNature(project, configuration, monitor);
+        configureNewMavenProjects(Collections.singletonList(project), monitor);
+      }
+    }, monitor);
   }
 
-  private void enableBasicMavenNature(IProject project, ResolverConfiguration configuration, IProgressMonitor monitor)
-      throws CoreException {
+  /*package*/void enableBasicMavenNature(IProject project, ResolverConfiguration configuration,
+      IProgressMonitor monitor) throws CoreException {
     ResolverConfigurationIO.saveResolverConfiguration(project, configuration);
 
     // add maven nature even for projects without valid pom.xml file
@@ -811,21 +820,6 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
 
     try {
 
-      if(StringUtils.isBlank(artifactRemoteRepository)) {
-
-        IMavenConfiguration mavenConfiguration = MavenPlugin.getMavenConfiguration();
-        if(!mavenConfiguration.isOffline()) {
-          //Try to find the repository from remote catalog if needed
-          final ArchetypeManager archetypeManager = MavenPluginActivator.getDefault().getArchetypeManager();
-          RemoteCatalogFactory factory = archetypeManager.findParentCatalogFactory(a, RemoteCatalogFactory.class);
-          if(factory != null) {
-            //Grab the computed remote repository url
-            artifactRemoteRepository = factory.getRepositoryUrl();
-            a.setRepository(artifactRemoteRepository);//Hopefully will prevent further lookups for the same archetype
-          }
-        }
-      }
-
       if(StringUtils.isNotBlank(artifactRemoteRepository)) {
         ArtifactRepository archetypeRepository = maven.createArtifactRepository(
             a.getArtifactId() + "-repo", a.getRepository().trim()); //$NON-NLS-1$
@@ -967,11 +961,15 @@ public class ProjectConfigurationManager implements IProjectConfigurationManager
         }
 
         if(facade != null) {
-          LifecycleMappingConfiguration oldConfiguration = LifecycleMappingConfiguration.restore(facade, monitor);
-          if(oldConfiguration != null
-              && LifecycleMappingFactory.isLifecycleMappingChanged(facade, oldConfiguration, monitor)) {
-            mavenMarkerManager.addMarker(facade.getProject(), IMavenConstants.MARKER_CONFIGURATION_ID,
-                Messages.ProjectConfigurationUpdateRequired, -1, IMarker.SEVERITY_ERROR);
+          ProblemSeverity outOfDateSeverity = ProblemSeverity.get(mavenConfiguration.getOutOfDateProjectSeverity());
+          mavenMarkerManager.deleteMarkers(facade.getProject(), IMavenConstants.MARKER_CONFIGURATION_ID);
+          if(!ProblemSeverity.ignore.equals(outOfDateSeverity)) {
+            LifecycleMappingConfiguration oldConfiguration = LifecycleMappingConfiguration.restore(facade, monitor);
+            if(oldConfiguration != null
+                && LifecycleMappingFactory.isLifecycleMappingChanged(facade, oldConfiguration, monitor)) {
+              mavenMarkerManager.addMarker(facade.getProject(), IMavenConstants.MARKER_CONFIGURATION_ID,
+                  Messages.ProjectConfigurationUpdateRequired, -1, outOfDateSeverity.getSeverity());
+            }
           }
         } else {
           IMavenProjectFacade oldFacade = event.getOldMavenProject();

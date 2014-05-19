@@ -17,6 +17,7 @@ import org.osgi.service.prefs.BackingStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.eclipse.aether.repository.RepositoryPolicy;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.ListenerList;
@@ -31,7 +32,7 @@ import org.eclipse.core.runtime.preferences.IPreferenceFilter;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 
-import org.sonatype.aether.repository.RepositoryPolicy;
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 
 import org.eclipse.m2e.core.embedder.IMavenConfiguration;
 import org.eclipse.m2e.core.embedder.IMavenConfigurationChangeListener;
@@ -73,8 +74,7 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
       ((IEclipsePreferences) preferencesLookup[0].parent()).removeNodeChangeListener(this);
       preferencesLookup[0].removePreferenceChangeListener(this);
     }
-    //Don't use InstanceScope.INSTANCE to maintain compatibility with helios
-    preferencesLookup[0] = new InstanceScope().getNode(IMavenConstants.PLUGIN_ID);
+    preferencesLookup[0] = InstanceScope.INSTANCE.getNode(IMavenConstants.PLUGIN_ID);
     ((IEclipsePreferences) preferencesLookup[0].parent()).addNodeChangeListener(this);
     preferencesLookup[0].addPreferenceChangeListener(this);
 
@@ -82,8 +82,7 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
       ((IEclipsePreferences) preferencesLookup[1].parent()).removeNodeChangeListener(this);
       preferencesLookup[1].removePreferenceChangeListener(this);
     }
-    //Don't use DefaultScope.INSTANCE to maintain compatibility with helios
-    preferencesLookup[1] = new DefaultScope().getNode(IMavenConstants.PLUGIN_ID);
+    preferencesLookup[1] = DefaultScope.INSTANCE.getNode(IMavenConstants.PLUGIN_ID);
     ((IEclipsePreferences) preferencesLookup[1].parent()).addNodeChangeListener(this);
   }
 
@@ -127,17 +126,39 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
   }
 
   public void setUserSettingsFile(String settingsFile) throws CoreException {
-    preferencesLookup[0].put(MavenPreferenceConstants.P_USER_SETTINGS_FILE, nvl(settingsFile));
-    preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+    settingsFile = trim(settingsFile);
+    if(!eq(settingsFile, preferencesLookup[0].get(MavenPreferenceConstants.P_USER_SETTINGS_FILE, null))) {
+      if(settingsFile != null) {
+        preferencesLookup[0].put(MavenPreferenceConstants.P_USER_SETTINGS_FILE, settingsFile);
+      } else {
+        preferencesLookup[0].remove(MavenPreferenceConstants.P_USER_SETTINGS_FILE);
+      }
+      preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+    }
   }
 
   public void setGlobalSettingsFile(String globalSettingsFile) throws CoreException {
-    preferencesLookup[0].put(MavenPreferenceConstants.P_GLOBAL_SETTINGS_FILE, nvl(globalSettingsFile));
-    preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+    globalSettingsFile = trim(globalSettingsFile);
+    if(!eq(globalSettingsFile, preferencesLookup[0].get(MavenPreferenceConstants.P_GLOBAL_SETTINGS_FILE, null))) {
+      if(globalSettingsFile != null) {
+        preferencesLookup[0].put(MavenPreferenceConstants.P_GLOBAL_SETTINGS_FILE, globalSettingsFile);
+      } else {
+        preferencesLookup[0].remove(MavenPreferenceConstants.P_GLOBAL_SETTINGS_FILE);
+      }
+      preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+    }
   }
 
-  private static String nvl(String s) {
-    return s == null ? "" : s; //$NON-NLS-1$
+  private boolean eq(String a, String b) {
+    return a != null ? a.equals(b) : b == null;
+  }
+
+  private String trim(String str) {
+    if(str == null) {
+      return null;
+    }
+    str = str.trim();
+    return !str.isEmpty() ? str : null;
   }
 
   public boolean isUpdateProjectsOnStartup() {
@@ -212,7 +233,11 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
   }
 
   public void setWorkspaceLifecycleMappingMetadataFile(String location) throws CoreException {
-    preferencesLookup[0].put(MavenPreferenceConstants.P_WORKSPACE_MAPPINGS_LOCATION, nvl(location));
+    if(location != null) {
+      preferencesLookup[0].put(MavenPreferenceConstants.P_WORKSPACE_MAPPINGS_LOCATION, location);
+    } else {
+      preferencesLookup[0].remove(MavenPreferenceConstants.P_WORKSPACE_MAPPINGS_LOCATION);
+    }
     preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
   }
 
@@ -231,4 +256,60 @@ public class MavenConfigurationImpl implements IMavenConfiguration, IPreferenceC
     return Boolean.parseBoolean(preferenceStore.get(MavenPreferenceConstants.P_CHECK_SUBMODULS_UPON_UPDATE, null,
         preferencesLookup));
   }
+  
+  public String getOutOfDateProjectSeverity() {
+    return preferenceStore.get(MavenPreferenceConstants.P_OUT_OF_DATE_PROJECT_CONFIG_PB,
+        ProblemSeverity.error.toString(), preferencesLookup);
+  }
+
+  /**
+   * For testing purposes only
+   */
+  public void setOutOfDateProjectSeverity(String severity) throws CoreException {
+    if(severity == null) {
+      preferencesLookup[0].remove(MavenPreferenceConstants.P_OUT_OF_DATE_PROJECT_CONFIG_PB);
+    } else {
+      preferencesLookup[0].put(MavenPreferenceConstants.P_OUT_OF_DATE_PROJECT_CONFIG_PB, severity);
+    }
+    preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+  }
+
+  @Override
+  public String getGlobalChecksumPolicy() {
+    return preferenceStore.get(MavenPreferenceConstants.P_GLOBAL_CHECKSUM_POLICY, null, preferencesLookup);
+  }
+
+  /**
+   * For testing purposes only.
+   */
+  public void setGlobalChecksumPolicy(String checksumPolicy) {
+    if(checksumPolicy == null) {
+      preferencesLookup[0].remove(MavenPreferenceConstants.P_GLOBAL_CHECKSUM_POLICY);
+    } else if(ArtifactRepositoryPolicy.CHECKSUM_POLICY_FAIL.equals(checksumPolicy) //will fail eclipse builds in case checksum fails
+        || ArtifactRepositoryPolicy.CHECKSUM_POLICY_WARN.equals(checksumPolicy) //XXX checksum warnings should be rendered as markers
+        || ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE.equals(checksumPolicy)) {//will simply be ignored 
+      preferencesLookup[0].put(MavenPreferenceConstants.P_GLOBAL_CHECKSUM_POLICY, checksumPolicy);
+    } else {
+      throw new IllegalArgumentException(checksumPolicy + " is not a valid checksum policy");
+    }
+  }
+
+  @Override
+  public String getNotCoveredMojoExecutionSeverity() {
+    return preferenceStore.get(MavenPreferenceConstants.P_NOT_COVERED_MOJO_EXECUTION_PB,
+        ProblemSeverity.error.toString(), preferencesLookup);
+  }
+
+  /**
+   * For testing purposes only
+   */
+  public void setNotCoveredMojoExecutionSeverity(String severity) throws CoreException {
+    if(severity == null) {
+      preferencesLookup[0].remove(MavenPreferenceConstants.P_NOT_COVERED_MOJO_EXECUTION_PB);
+    } else {
+      preferencesLookup[0].put(MavenPreferenceConstants.P_NOT_COVERED_MOJO_EXECUTION_PB, severity);
+    }
+    preferenceStore.applyPreferences(preferencesLookup[0], new IPreferenceFilter[] {getPreferenceFilter()});
+  }
+
 }

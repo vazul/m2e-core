@@ -22,7 +22,7 @@
 
   <groupId>org.eclipse.m2e</groupId>
   <artifactId>m2e-core</artifactId>
-  <version>1.4.0-SNAPSHOT</version>
+  <version>1.5.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Maven Integration for Eclipse (parent)</name>
@@ -36,7 +36,7 @@
 
     <m2e-maven-runtime.version>${project.version}</m2e-maven-runtime.version>
 
-    <tycho-version>0.17.0</tycho-version>
+    <tycho-version>0.20.0</tycho-version>
     <tycho-extras-version>${tycho-version}</tycho-extras-version>
 
     <!-- eclipse version m2e is built against -->
@@ -66,6 +66,18 @@
       <layout>p2</layout>
       <url>${eclipse-repo.url}</url>
     </repository>
+    <repository>
+      <id>eclipse-license</id>
+      <layout>p2</layout>
+      <url>http://download.eclipse.org/cbi/updates/license</url>
+    </repository>
+    <repository>
+      <!-- 430714 used to locate guava 15 -->
+      <!-- TODO remove when compatible guava version is available from ${eclipse-repo.url} -->
+      <id>orbit</id>
+      <layout>p2</layout>
+      <url>http://download.eclipse.org/tools/orbit/downloads/drops/S20140227085123/repository/</url>
+    </repository>
   </repositories>
 
   <pluginRepositories>
@@ -90,12 +102,15 @@
     <module>org.eclipse.m2e.core.ui</module>
     <module>org.eclipse.m2e.launching</module>
     <module>org.eclipse.m2e.jdt</module>
+    <module>org.eclipse.m2e.jdt.ui</module>
     <module>org.eclipse.m2e.refactoring</module>
     <module>org.eclipse.m2e.editor.xml</module>
     <module>org.eclipse.m2e.editor</module>
     <module>org.eclipse.m2e.lifecyclemapping.defaults</module>
     <module>org.eclipse.m2e.discovery</module>
     <module>org.eclipse.m2e.scm</module>
+    <module>org.eclipse.m2e.profiles.core</module>
+    <module>org.eclipse.m2e.profiles.ui</module>
 
     <!-- common test helpers -->
     <module>org.eclipse.m2e.tests.common</module>
@@ -116,11 +131,6 @@
   <dependencies>
     <dependency>
       <groupId>org.eclipse.m2e</groupId>
-      <artifactId>com.ning.async-http-client</artifactId>
-      <version>${m2e-maven-runtime.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.m2e</groupId>
       <artifactId>org.eclipse.m2e.archetype.common</artifactId>
       <version>${m2e-maven-runtime.version}</version>
     </dependency>
@@ -136,7 +146,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.m2e</groupId>
-      <artifactId>org.jboss.netty</artifactId>
+      <artifactId>org.eclipse.m2e.maven.runtime.slf4j.simple</artifactId>
       <version>${m2e-maven-runtime.version}</version>
     </dependency>
   </dependencies>
@@ -157,6 +167,19 @@
         <configuration>
           <pomDependencies>consider</pomDependencies>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-source-plugin</artifactId>
+        <version>${tycho-version}</version>
+        <executions>
+          <execution>
+            <id>plugin-source</id>
+            <goals>
+              <goal>plugin-source</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
 
@@ -278,36 +301,6 @@
       </build>
     </profile>
 
-    <!-- 
-      workaround for https://issues.sonatype.org/browse/TYCHO-562
-      tycho-source-plugin chokes on bundles without source folders, so we disable it with marker file 
-    -->
-    <profile>
-      <id>source-bundle</id>
-      <activation>
-        <file>
-          <missing>no-source-bundle.txt</missing>
-        </file>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.eclipse.tycho</groupId>
-            <artifactId>tycho-source-plugin</artifactId>
-            <version>${tycho-version}</version>
-            <executions>
-              <execution>
-                <id>plugin-source</id>
-                <goals>
-                  <goal>plugin-source</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
     <profile>
       <id>selfhosted-workspace</id>
       <!--
@@ -398,6 +391,11 @@
       <id>rgould</id>
       <name>Richard Gould</name>
       <organization>Sonatype Inc.</organization>
+    </developer>
+    <developer>
+      <id>fbricon</id>
+      <name>Fred Bricon</name>
+      <timezone>+1</timezone>
     </developer>
   </developers>
 

@@ -2,9 +2,11 @@
 <feature
       id="org.eclipse.m2e.feature"
       label="%featureName"
-      version="1.4.0.qualifier"
+      version="1.5.0.qualifier"
       provider-name="%providerName"
-      plugin="org.eclipse.m2e.core">
+      plugin="org.eclipse.m2e.core"
+      license-feature="org.eclipse.license"
+      license-feature-version="0.0.0">
    <install-handler/>
 
    <description>
@@ -94,6 +96,12 @@
          version="0.0.0"/>
 
    <plugin
+         id="org.eclipse.m2e.maven.runtime.slf4j.simple"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"/>
+
+   <plugin
          id="org.eclipse.m2e.refactoring"
          download-size="0"
          install-size="0"
@@ -127,15 +135,32 @@
          version="0.0.0"
          unpack="false"/>
 
-     <plugin id="com.ning.async-http-client"
-              download-size="0"
+   <plugin
+         id="org.eclipse.m2e.jdt.ui"
+         download-size="0"
          install-size="0"
          version="0.0.0"
          unpack="false"/>
-         
-     <plugin id="org.jboss.netty"
-              download-size="0"
+
+   <plugin
+         id="org.eclipse.m2e.profiles.core"
+         download-size="0"
          install-size="0"
          version="0.0.0"
-         unpack="false"/>       
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.m2e.profiles.ui"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="com.google.guava"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
 </feature>

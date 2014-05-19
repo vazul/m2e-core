@@ -46,7 +46,6 @@ import org.eclipse.ui.IStorageEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkingSet;
-import org.eclipse.ui.IWorkingSetManager;
 import org.eclipse.ui.PlatformUI;
 
 import org.codehaus.plexus.util.IOUtil;
@@ -65,6 +64,7 @@ import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.IMavenProjectRegistry;
 import org.eclipse.m2e.core.ui.internal.Messages;
+import org.eclipse.m2e.core.ui.internal.WorkingSets;
 import org.eclipse.m2e.core.ui.internal.util.Util;
 import org.eclipse.m2e.core.ui.internal.util.Util.FileStoreEditorInputStub;
 
@@ -196,7 +196,7 @@ public class SelectionUtil {
 
     IResource resource = getType(element, IResource.class);
     if(resource != null) {
-      return getWorkingSet(resource.getProject());
+      return WorkingSets.getAssignedWorkingSet(resource.getProject());
     }
 
     return null;
@@ -218,37 +218,12 @@ public class SelectionUtil {
 //    }
   }
 
-  public static IWorkingSet getWorkingSet(Object element) {
-    IWorkingSetManager workingSetManager = PlatformUI.getWorkbench().getWorkingSetManager();
-    for(IWorkingSet workingSet : workingSetManager.getWorkingSets()) {
-      for(IAdaptable adaptable : workingSet.getElements()) {
-        if(adaptable.getAdapter(IResource.class) == element) {
-          return workingSet;
-        }
-      }
-    }
-    return null;
-  }
-
-  public static List<IWorkingSet> getAssignedWorkingSets(Object element) {
-    List<IWorkingSet> list = new ArrayList<IWorkingSet>();
-    IWorkingSetManager workingSetManager = PlatformUI.getWorkbench().getWorkingSetManager();
-    for(IWorkingSet workingSet : workingSetManager.getWorkingSets()) {
-      for(IAdaptable adaptable : workingSet.getElements()) {
-        if(adaptable.getAdapter(IResource.class) == element) {
-          list.add(workingSet);
-        }
-      }
-    }
-    return list;
-  }
-
   public static ArtifactKey getArtifactKey(Object element) throws CoreException {
     if(element instanceof Artifact) {
       return new ArtifactKey(((Artifact) element));
 
-    } else if(element instanceof org.sonatype.aether.graph.DependencyNode) {
-      org.sonatype.aether.artifact.Artifact artifact = ((org.sonatype.aether.graph.DependencyNode) element)
+    } else if(element instanceof org.eclipse.aether.graph.DependencyNode) {
+      org.eclipse.aether.artifact.Artifact artifact = ((org.eclipse.aether.graph.DependencyNode) element)
           .getDependency().getArtifact();
       return new ArtifactKey(artifact);
 
@@ -426,19 +401,19 @@ public class SelectionUtil {
       for(Iterator<?> it = ((IStructuredSelection) selection).iterator(); it.hasNext();) {
         Object o = it.next();
         if(o instanceof IProject) {
-          projectList.add((IProject) o);
+          safeAdd((IProject) o, projectList);
         } else if(o instanceof IWorkingSet) {
           IWorkingSet workingSet = (IWorkingSet) o;
           for(IAdaptable adaptable : workingSet.getElements()) {
             IProject project = (IProject) adaptable.getAdapter(IProject.class);
-            try {
-              if(project != null && project.isAccessible() && project.hasNature(IMavenConstants.NATURE_ID)) {
-                projectList.add(project);
-              }
-            } catch(CoreException ex) {
-              log.error(ex.getMessage(), ex);
-            }
+            safeAdd(project, projectList);
           }
+        } else if(o instanceof IResource) {
+          safeAdd(((IResource) o).getProject(), projectList);
+        } else if(o instanceof IAdaptable) {
+          IAdaptable adaptable = (IAdaptable) o;
+          IProject project = (IProject) adaptable.getAdapter(IProject.class);
+          safeAdd(project, projectList);
         }
       }
     }
@@ -447,6 +422,17 @@ public class SelectionUtil {
       return ResourcesPlugin.getWorkspace().getRoot().getProjects();
     }
     return projectList.toArray(new IProject[projectList.size()]);
+  }
+
+  private static void safeAdd(IProject project, List<IProject> projectList) {
+    try {
+      if(project != null && project.isAccessible() && project.hasNature(IMavenConstants.NATURE_ID)
+          && !projectList.contains(project)) {
+        projectList.add(project);
+      }
+    } catch(CoreException ex) {
+      log.error(ex.getMessage(), ex);
+    }
   }
 
 }

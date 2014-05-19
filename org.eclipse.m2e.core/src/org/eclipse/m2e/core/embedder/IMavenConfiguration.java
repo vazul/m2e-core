@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 Sonatype, Inc.
+ * Copyright (c) 2008-2014 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,7 +11,11 @@
 
 package org.eclipse.m2e.core.embedder;
 
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
+
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
+import org.apache.maven.execution.MavenExecutionRequest;
 
 
 /**
@@ -30,7 +34,7 @@ public interface IMavenConfiguration {
   public boolean isOffline();
 
   /**
-   * One of org.sonatype.aether.repository.RepositoryPolicy.UPDATE constants or null. If not null, the specified update
+   * One of org.eclipse.aether.repository.RepositoryPolicy.UPDATE constants or null. If not null, the specified update
    * policy overrides the update policies of the remote repositories being used for resolution.
    */
   public String getGlobalUpdatePolicy();
@@ -73,4 +77,32 @@ public interface IMavenConfiguration {
   public boolean isSetWorkspaceResolutionDuringLaunch();
 
   public boolean isCheckSubmodulesUponUpdate();
+  
+  /**
+   * Returns {@link IMarker} severity of "out-of-date" project problem
+   * 
+   * @return One of <code>ignore</code>, <code>warning</code> or <code>error</code>.
+   * @since 1.5
+   */
+  public String getOutOfDateProjectSeverity();
+
+  /**
+   * Returns the global checksum policy applied on {@link MavenExecutionRequest}s.
+   * 
+   * @return <code>fail</code>, <code>warn</code> or <code>ignore</code> to override repositories specific checksum
+   *         policies or <code>null</code> to follow default behavior.
+   * @see {@link ArtifactRepositoryPolicy#CHECKSUM_POLICY_FAIL}
+   * @see {@link ArtifactRepositoryPolicy#CHECKSUM_POLICY_WARN}
+   * @see {@link ArtifactRepositoryPolicy#CHECKSUM_POLICY_IGNORE}
+   * @since 1.5
+   */
+  public String getGlobalChecksumPolicy();
+
+  /**
+   * Returns {@link IMarker} severity of "Not Covered Mojo Execution" problem.
+   * 
+   * @return One of <code>ignore</code>, <code>warning</code> or <code>error</code>.
+   * @since 1.5
+   */
+  public String getNotCoveredMojoExecutionSeverity();
 }

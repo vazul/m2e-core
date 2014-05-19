@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 Sonatype, Inc.
+ * Copyright (c) 2008-2014 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -42,6 +42,8 @@ public class Messages extends NLS {
   public static String AddDependencyDialog_version_label;
 
   public static String AddPluginAction_searchDialog_title;
+
+  public static String AssignWorkingSetDialog_title;
 
   public static String ChangeNatureAction_job_changing;
 
@@ -219,13 +221,13 @@ public class Messages extends NLS {
 
   public static String MavenGoalSelectionDialog_message;
 
-  public static String MavenImportWizard_analyzingProject;
-
   public static String MavenImportWizard_hideWarningMessage;
 
   public static String MavenImportWizard_job;
 
   public static String MavenImportWizard_title;
+
+  public static String MavenImportWizardPage_createWorkingSet;
 
   public static String MavenImportWizardPage_desc;
 
@@ -253,47 +255,17 @@ public class Messages extends NLS {
 
   public static String MavenInstallationsPreferencePage_btnEdit;
 
-  public static String MavenInstallationsPreferencePage_btnGlobalBrowse;
-
   public static String MavenInstallationsPreferencePage_btnRemove;
 
   public static String MavenInstallationsPreferencePage_dialog_install_message;
 
   public static String MavenInstallationsPreferencePage_dialog_install_title;
 
-  public static String MavenInstallationsPreferencePage_dialog_message;
-
-  public static String MavenInstallationsPreferencePage_dialog_title;
-
-  public static String MavenInstallationsPreferencePage_error_global_missing;
-
-  public static String MavenInstallationsPreferencePage_error_global_parse;
-
-  public static String MavenInstallationsPreferencePage_error_message;
-
-  public static String MavenInstallationsPreferencePage_error_title;
-
-  public static String MavenInstallationsPreferencePage_error2_message;
-
-  public static String MavenInstallationsPreferencePage_error3_message;
-
-  public static String MavenInstallationsPreferencePage_error4_message;
-
-  public static String MavenInstallationsPreferencePage_job_updating;
-
-  public static String MavenInstallationsPreferencePage_lblNote1;
-
-  public static String MavenInstallationsPreferencePage_lblNote2;
+  public static String MavenInstallationsPreferencePage_lblNote;
 
   public static String MavenInstallationsPreferencePage_link;
 
-  public static String MavenInstallationsPreferencePage_link_global;
-
-  public static String MavenInstallationsPreferencePage_link_open;
-
-  public static String MavenInstallationsPreferencePage_settings;
-
-  public static String MavenInstallationsPreferencePage_settings_install;
+  public static String MavenInstallationsPreferencePage_runtimeUnavailable;
 
   public static String MavenInstallationsPreferencePage_title;
 
@@ -373,6 +345,8 @@ public class Messages extends NLS {
 
   public static String MavenPomSelectionComponent_toomany;
 
+  public static String MavenPomSelectionComponent_UnavailableRemoteRepositoriesIndexes;
+
   public static String MavenPomWizard_error_exists;
 
   public static String MavenPomWizard_error_title;
@@ -405,6 +379,8 @@ public class Messages extends NLS {
 
   public static String MavenPomWizardPage_title;
 
+  public static String MavenPreferencePage_changingPreferencesRequiresProjectUpdate;
+
   public static String MavenPreferencePage_download;
 
   public static String MavenPreferencePage_hide;
@@ -414,6 +390,8 @@ public class Messages extends NLS {
   public static String MavenPreferencePage_checkSubmodulesUponUpdate;
 
   public static String MavenPreferencePage_update;
+
+  public static String MavenPreferencePage_updateProjectRequired_title;
 
   public static String MavenProjectPreferencePage_btnResolve;
 
@@ -441,13 +419,17 @@ public class Messages extends NLS {
 
   public static String MavenProjectWizardArchetypePage_btnSnapshots;
 
-  public static String MavenProjectWizardArchetypePage_error_no;
+  public static String MavenProjectWizardArchetypePage_error_emptyNexusIndexer;
+
+  public static String MavenProjectWizardArchetypePage_error_emptyCatalog;
 
   public static String MavenProjectWizardArchetypePage_error_read;
 
   public static String MavenProjectWizardArchetypePage_error_resolve;
 
   public static String MavenProjectWizardArchetypePage_error_resolve2;
+
+  public static String MavenProjectWizardArchetypePage_ErrorRetrievingArchetypes;
 
   public static String MavenProjectWizardArchetypePage_lblCatalog;
 
@@ -555,13 +537,17 @@ public class Messages extends NLS {
 
   public static String MavenRepositoryView_update_one;
 
-  public static String MavenSettingsPreferencePage_btnBrowse;
+  public static String MavenSettingsPreferencePage_userSettingsBrowseButton_text;
 
   public static String MavenSettingsPreferencePage_btnUpdate;
 
-  public static String MavenSettingsPreferencePage_error_missing;
+  public static String MavenSettingsPreferencePage_error_globalSettingsMissing;
 
-  public static String MavenSettingsPreferencePage_error_parse;
+  public static String MavenSettingsPreferencePage_error_userSettingsMissing;
+
+  public static String MavenSettingsPreferencePage_error_globalSettingsParse;
+
+  public static String MavenSettingsPreferencePage_error_userSettingsParse;
 
   public static String MavenSettingsPreferencePage_job_indexing;
 
@@ -569,17 +555,33 @@ public class Messages extends NLS {
 
   public static String MavenSettingsPreferencePage_lblLocal;
 
-  public static String MavenSettingsPreferencePage_link_tooltip;
+  public static String MavenSettingsPreferencePage_userSettingslink_tooltip;
 
-  public static String MavenSettingsPreferencePage_link1;
+  public static String MavenSettingsPreferencePage_userSettingslink1;
 
-  public static String MavenSettingsPreferencePage_link2;
+  public static String MavenSettingsPreferencePage_userSettingslink2;
+
+  public static String MavenSettingsPreferencePage_globalSettingslink_tooltip;
+
+  public static String MavenSettingsPreferencePage_globalSettingslink1;
+
+  public static String MavenSettingsPreferencePage_globalSettingslink2;
 
   public static String MavenSettingsPreferencePage_task_updating;
 
   public static String MavenSettingsPreferencePage_title;
 
+  public static String MavenWarningsPreferencePage_Error;
+
+  public static String MavenWarningsPreferencePage_Ignore;
+
+  public static String MavenWarningsPreferencePage_Warning;
+
+  public static String MavenWarningsPreferencePage_OutOfDate_Project_Config;
+
   public static String MavenWarningsPreferencePage_groupidDupParent;
+
+  public static String MavenWarningsPreferencePage_notCoveredMojoExecution;
 
   public static String MavenWarningsPreferencePage_versionDupParent;
 
@@ -661,6 +663,8 @@ public class Messages extends NLS {
 
   public static String UpdateSourcesAction_job_update_conf;
 
+  public static String MavenWarningsPreferencePage_changingProblemSeveritiesRequiresProjectUpdate;
+
   public static String WorkingSetGroup_btnAddSet;
 
   public static String WorkingSetGroup_btnMore;
@@ -680,6 +684,18 @@ public class Messages extends NLS {
   public static String preferencesGlobalUpdateNever;
 
   public static String preferencesDebugOutput;
+
+  public static String preferencesGlobalChecksumPolicy;
+
+  public static String preferencesGlobalChecksumPolicy_tooltip;
+
+  public static String preferencesGlobalChecksumPolicy_default;
+
+  public static String preferencesGlobalChecksumPolicy_ignore;
+
+  public static String preferencesGlobalChecksumPolicy_warn;
+
+  public static String preferencesGlobalChecksumPolicy_fail;
 
   public static String preferencesDownloadSources;
 
@@ -892,6 +908,76 @@ public class Messages extends NLS {
   public static String BuildDebugView_errorDescription;
 
   public static String UpdateMavenProjectsDialog_btnRefreshFromLocal_text;
+
+  public static String AssignWorkingSetDialog_btnFilterAssignedProjects_text;
+
+  public static String AssignWorkingSetDialog_btnAssign_text;
+
+  public static String AssignWorkingSetDialog_btnFilterClosedProjects_text;
+
+  public static String AssignWorkingSetDialog_lblWorkingSet;
+
+  public static String NestedProjectsComposite_Add_OutOfDate;
+
+  public static String NestedProjectsComposite_Multiple_OOD_Projects_Link;
+
+  public static String NestedProjectsComposite_OutOfDateProjectBtn_AddOneProject_Tooltip;
+
+  public static String NestedProjectsComposite_OutOfDateProjectBtn_AddProjects_Tooltip;
+
+  public static String NestedProjectsComposite_OutOfDateProjectBtn_Generic_Tooltip;
+
+  public static String NestedProjectsComposite_Single_OOD_Project_Link;
+
+  public static String ExternalInstallPage_pageName;
+
+  public static String ExternalInstallPage_description;
+
+  public static String ExternalInstallPage_lblInstallationLocation_text;
+
+  public static String ExternalInstallPage_btnDirectory_text;
+
+  public static String ExternalInstallPage_lblInstallationLibraries_text;
+
+  public static String ExternalInstallPage_btnRestoreDefault_text;
+
+  public static String ExternalInstallPage_btnAddProject_text;
+
+  public static String ExternalInstallPage_btnRemove_text;
+
+  public static String ExternalInstallPage_btnUp_text;
+
+  public static String ExternalInstallPage_btnDown_text;
+
+  public static String ExternalInstallPage_lblInstallationName_text;
+
+  public static String MavenInstallationsPreferencePage_tblclmnName_text;
+
+  public static String MavenInstallationsPreferencePage_tblclmnDetails_text;
+
+  public static String MavenInstallationWizard_titleAddInstallation;
+
+  public static String MavenInstallationWizard_titleNewInstallation;
+
+  public static String MavenInstallationWizardPage_btnExternal_text_1;
+
+  public static String MavenInstallationWizardPage_btnWorkspace_text;
+
+  public static String MavenInstallationWizardPage_lblInstallationType_text;
+
+  public static String MavenInstallationWizardPage_messageDuplicateInstallationName;
+
+  public static String MavenInstallationWizardPage_messageHomeDirectoryIsNotMavenInstll;
+
+  public static String MavenInstallationWizardPage_messageSelectHomeDirectory;
+
+  public static String MavenInstallationWizardPage_messageSelectInstallatonName;
+
+  public static String MavenInstallationWizardPage_selectProjectMessage;
+
+  public static String MavenInstallationWizardPage_selectProjectTitle;
+
+  public static String MavenSettingsPreferencePage_globalSettingsBrowseButton_text;
 
   static {
     // initialize resource bundle

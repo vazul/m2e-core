@@ -11,6 +11,9 @@
 
 package org.eclipse.m2e.core.internal.embedder;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +39,8 @@ abstract class AbstractTransferListenerAdapter {
 
   protected final IProgressMonitor monitor;
 
-  protected long complete = 0;
+  //The same TransferListener monitors parallel downloads
+  protected Map<String, Long> progressMap = new ConcurrentHashMap<String, Long>();
 
   private static final String[] units = {Messages.AbstractTransferListenerAdapter_byte,
       Messages.AbstractTransferListenerAdapter_kb, Messages.AbstractTransferListenerAdapter_mb};
@@ -46,7 +50,7 @@ abstract class AbstractTransferListenerAdapter {
     this.monitor = monitor == null ? new NullProgressMonitor() : monitor;
   }
 
-  protected void formatBytes(long n, StringBuffer sb) {
+  protected void formatBytes(long n, StringBuilder sb) {
     int i = 0;
     while(n >= 1024 && ++i < units.length)
       n >>= 10;
@@ -60,8 +64,6 @@ abstract class AbstractTransferListenerAdapter {
       throw new OperationCanceledException(Messages.AbstractTransferListenerAdapter_cancelled);
     }
 
-    this.complete = 0;
-
     if(artifactUrl != null) {
       monitor.subTask(artifactUrl);
     }
@@ -70,7 +72,7 @@ abstract class AbstractTransferListenerAdapter {
   protected void transferStarted(String artifactUrl) {
     log.info(NLS.bind("Downloading {0}", artifactUrl));
     // monitor.beginTask("0% "+e.getWagon().getRepository()+"/"+e.getResource().getName(), IProgressMonitor.UNKNOWN);
-    monitor.subTask(Messages.AbstractTransferListenerAdapter_4 + artifactUrl);
+    monitor.subTask(NLS.bind(Messages.AbstractTransferListenerAdapter_4, artifactUrl));
   }
 
   protected void transferProgress(String artifactUrl, long total, int length) throws OperationCanceledException {
@@ -78,9 +80,12 @@ abstract class AbstractTransferListenerAdapter {
       throw new OperationCanceledException(Messages.AbstractTransferListenerAdapter_cancelled);
     }
 
+    Long downloadProgress = progressMap.get(artifactUrl);
+    long complete = downloadProgress == null ? 0L : downloadProgress.longValue();
     complete += length;
+    progressMap.put(artifactUrl, complete);
 
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
 
     formatBytes(complete, sb);
     if(total != WagonConstants.UNKNOWN_LENGTH) {
@@ -102,11 +107,13 @@ abstract class AbstractTransferListenerAdapter {
 
     // monitor.subTask("100% "+e.getWagon().getRepository()+"/"+e.getResource().getName());
     monitor.subTask(""); //$NON-NLS-1$
+    progressMap.remove(artifactUrl);
   }
 
   protected void transferError(String artifactUrl, Exception exception) {
     log.error(NLS.bind("Unable to download {0} : {1}", artifactUrl, exception));
     monitor.subTask(NLS.bind(Messages.AbstractTransferListenerAdapter_subtask, artifactUrl));
+    progressMap.remove(artifactUrl);
   }
 
 }

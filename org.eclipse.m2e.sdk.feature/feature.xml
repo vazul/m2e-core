@@ -2,8 +2,10 @@
 <feature
       id="org.eclipse.m2e.sdk.feature"
       label="%featureName"
-      version="1.4.0.qualifier"
-      provider-name="%providerName">
+      version="1.5.0.qualifier"
+      provider-name="%providerName"
+      license-feature="org.eclipse.license"
+      license-feature-version="0.0.0">
 
    <description>
       %description
@@ -64,6 +66,13 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.m2e.jdt.ui.source"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+         
+   <plugin
          id="org.eclipse.m2e.editor.source"
          download-size="0"
          install-size="0"
@@ -100,6 +109,20 @@
 
    <plugin
          id="org.eclipse.m2e.scm.source"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.m2e.profiles.ui.source"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+         
+   <plugin
+         id="org.eclipse.m2e.profiles.core.source"
          download-size="0"
          install-size="0"
          version="0.0.0"

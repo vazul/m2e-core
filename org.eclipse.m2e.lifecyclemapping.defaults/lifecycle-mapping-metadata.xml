@@ -2,29 +2,6 @@
 <lifecycleMappingMetadata>
   <lifecycleMappings>
     <lifecycleMapping>
-      <packagingType>maven-plugin</packagingType>
-      <lifecycleMappingId>org.eclipse.m2e.jdt.JarLifecycleMapping</lifecycleMappingId>
-      <pluginExecutions>
-        <pluginExecution>
-          <pluginExecutionFilter>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-plugin-plugin</artifactId>
-            <versionRange>[2.3,)</versionRange>
-            <goals>
-              <goal>descriptor</goal>
-              <goal>helpmojo</goal>
-            </goals>
-          </pluginExecutionFilter>
-          <action>
-            <execute>
-              <runOnIncremental>false</runOnIncremental>
-            </execute>
-          </action>
-        </pluginExecution>
-      </pluginExecutions>
-    </lifecycleMapping>
-    
-    <lifecycleMapping>
       <packagingType>war</packagingType>
       <lifecycleMappingId>org.eclipse.m2e.jdt.JarLifecycleMapping</lifecycleMappingId>
     </lifecycleMapping>
@@ -63,22 +40,6 @@
       <action>
         <error>
           <message>maven-resources-plugin prior to 2.4 is not supported by m2e. Use maven-resources-plugin version 2.4 or later.</message>
-        </error>
-      </action>
-    </pluginExecution>
-    <pluginExecution>
-      <pluginExecutionFilter>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <goals>
-          <goal>copy-dependencies</goal>
-          <goal>unpack</goal>
-        </goals>
-        <versionRange>[2.0,)</versionRange>
-      </pluginExecutionFilter>
-      <action>
-        <error>
-          <message>maven-dependency-plugin (goals "copy-dependencies", "unpack") is not supported by m2e.</message>
         </error>
       </action>
     </pluginExecution>

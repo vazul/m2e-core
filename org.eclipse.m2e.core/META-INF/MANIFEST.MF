@@ -2,18 +2,18 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: org.eclipse.m2e.core;singleton:=true
-Bundle-Version: 1.4.0.qualifier
+Bundle-Version: 1.5.0.qualifier
 Bundle-Activator: org.eclipse.m2e.core.internal.MavenPluginActivator
 Bundle-Vendor: %Bundle-Vendor
 Bundle-Localization: plugin
 Require-Bundle: 
- org.eclipse.core.runtime,
+ org.eclipse.core.runtime;bundle-version="3.7.0",
  org.eclipse.core.resources;bundle-version="3.6.0",
- org.eclipse.m2e.maven.runtime;bundle-version="[1.4.0,1.5.0)",
- org.eclipse.m2e.archetype.common;bundle-version="[1.4.0,1.5.0)",
- org.eclipse.m2e.maven.indexer;bundle-version="[1.4.0,1.5.0)",
+ org.eclipse.m2e.maven.runtime;bundle-version="[1.5.0,1.6.0)",
+ org.eclipse.m2e.archetype.common;bundle-version="[1.5.0,1.6.0)",
+ org.eclipse.m2e.maven.indexer;bundle-version="[1.5.0,1.6.0)",
  org.slf4j.api;bundle-version="1.6.2",
- com.ning.async-http-client;bundle-version="[1.6.5,1.6.6)"
+ com.google.guava;bundle-version="[14.0.1,16.0.0)"
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6,
@@ -24,12 +24,14 @@ Export-Package: org.eclipse.m2e.core,
  org.eclipse.m2e.core.internal;x-internal:=true,
  org.eclipse.m2e.core.internal.archetype;x-internal:=true,
  org.eclipse.m2e.core.internal.builder;x-internal:=true,
+ org.eclipse.m2e.core.internal.builder.plexusbuildapi;x-internal:=true,
  org.eclipse.m2e.core.internal.content;x-internal:=true,
  org.eclipse.m2e.core.internal.embedder;x-internal:=true,
  org.eclipse.m2e.core.internal.index;x-internal:=true,
  org.eclipse.m2e.core.internal.index.filter;x-internal:=true,
  org.eclipse.m2e.core.internal.index.nexus;x-internal:=true,
  org.eclipse.m2e.core.internal.jobs;x-internal:=true,
+ org.eclipse.m2e.core.internal.launch;x-internal:=true,
  org.eclipse.m2e.core.internal.lifecyclemapping;x-internal:=true,
  org.eclipse.m2e.core.internal.lifecyclemapping.discovery;x-internal:=true,
  org.eclipse.m2e.core.internal.lifecyclemapping.model;x-internal:=true,

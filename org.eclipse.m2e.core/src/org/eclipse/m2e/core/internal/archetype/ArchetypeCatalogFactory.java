@@ -11,6 +11,8 @@
 
 package org.eclipse.m2e.core.internal.archetype;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -83,7 +85,7 @@ public abstract class ArchetypeCatalogFactory {
 
     public ArchetypeCatalog getArchetypeCatalog() throws CoreException {
       try {
-        ArchetypeDataSource source = MavenPluginActivator.getDefault().getArchetypeDataSource("nexus"); //$NON-NLS-1$
+        ArchetypeDataSource source = MavenPluginActivator.getDefault().getIndexManager().getArchetypeCatalog();
         return source.getArchetypeCatalog(new Properties());
       } catch(ArchetypeDataSourceException ex) {
         String msg = NLS.bind(Messages.ArchetypeCatalogFactory_error_missing_catalog, ex.getMessage());
@@ -180,7 +182,48 @@ public abstract class ArchetypeCatalogFactory {
       if(idx > -1) {
         url = url.substring(0, idx);
       }
-      return getArchetyper().getRemoteCatalog(url);
+      final ArchetypeCatalog catalog = getArchetyper().getRemoteCatalog(url);
+      final String remoteUrl = url;
+      @SuppressWarnings("serial")
+      ArchetypeCatalog catalogWrapper = new ArchetypeCatalog() {
+        public void addArchetype(org.apache.maven.archetype.catalog.Archetype archetype) {
+          catalog.addArchetype(archetype);
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public List getArchetypes() {
+          List<org.apache.maven.archetype.catalog.Archetype> archetypes = new ArrayList<org.apache.maven.archetype.catalog.Archetype>(
+              catalog.getArchetypes());
+          for(org.apache.maven.archetype.catalog.Archetype arch : archetypes) {
+            if(arch.getRepository() == null || arch.getRepository().trim().isEmpty()) {
+              arch.setRepository(remoteUrl);
+            }
+          }
+          return archetypes;
+        }
+
+        public String getModelEncoding() {
+          return catalog.getModelEncoding();
+        }
+
+        public void removeArchetype(org.apache.maven.archetype.catalog.Archetype archetype) {
+          catalog.removeArchetype(archetype);
+        }
+
+        public void setModelEncoding(String modelEncoding) {
+          catalog.setModelEncoding(modelEncoding);
+        }
+
+        public void setArchetypes(List archetypes) {
+          catalog.setArchetypes(archetypes);
+        }
+
+        public String toString() {
+          return catalog.toString();
+        }
+      };
+
+      return catalogWrapper;
     }
 
     /**

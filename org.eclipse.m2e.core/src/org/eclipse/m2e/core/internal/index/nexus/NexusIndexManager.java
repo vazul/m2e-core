@@ -58,6 +58,7 @@ import org.apache.lucene.search.QueryWrapperFilter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
+import org.apache.maven.archetype.source.ArchetypeDataSource;
 import org.apache.maven.index.ArtifactContext;
 import org.apache.maven.index.ArtifactContextProducer;
 import org.apache.maven.index.ArtifactInfo;
@@ -90,6 +91,8 @@ import org.eclipse.m2e.core.embedder.IMavenConfiguration;
 import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.internal.MavenPluginActivator;
 import org.eclipse.m2e.core.internal.Messages;
+import org.eclipse.m2e.core.internal.NoSuchComponentException;
+import org.eclipse.m2e.core.internal.e44.EquinoxLocker;
 import org.eclipse.m2e.core.internal.index.IIndex;
 import org.eclipse.m2e.core.internal.index.IndexListener;
 import org.eclipse.m2e.core.internal.index.IndexManager;
@@ -137,15 +140,15 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
    */
   private final Object contextProducerLock = new Object();
 
-  private IMaven maven;
+  private final IMaven maven;
 
-  private IMavenProjectRegistry projectManager;
+  private final IMavenProjectRegistry projectManager;
 
-  private IRepositoryRegistry repositoryRegistry;
+  private final IRepositoryRegistry repositoryRegistry;
 
-  private ArrayList<IndexCreator> fullCreators = null;
+  private final List<IndexCreator> fullCreators;
 
-  private ArrayList<IndexCreator> minCreators = null;
+  private final List<IndexCreator> minCreators;
 
   private final File baseIndexDir;
 
@@ -161,7 +164,7 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
 
   private Set<String> updatingIndexes = new HashSet<String>();
 
-  private IndexUpdater indexUpdater;
+  private final IndexUpdater indexUpdater;
 
   private static final EquinoxLocker locker = new EquinoxLocker();
 
@@ -172,13 +175,23 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
    */
   private final Map<String, Object> indexLocks = new WeakHashMap<String, Object>();
 
-  public NexusIndexManager(IMavenProjectRegistry projectManager, IRepositoryRegistry repositoryRegistry, File stateDir) {
+  private final PlexusContainer container;
+
+  public NexusIndexManager(PlexusContainer container, IMavenProjectRegistry projectManager,
+      IRepositoryRegistry repositoryRegistry, File stateDir) {
+    this.container = container;
     this.projectManager = projectManager;
     this.repositoryRegistry = repositoryRegistry;
     this.baseIndexDir = new File(stateDir, "nexus"); //$NON-NLS-1$
-
     this.maven = MavenPlugin.getMaven();
-    this.indexUpdater = MavenPluginActivator.getDefault().getIndexUpdater();
+
+    try {
+      this.indexUpdater = container.lookup(IndexUpdater.class);
+      this.fullCreators = Collections.unmodifiableList(getFullCreator());
+      this.minCreators = Collections.unmodifiableList(getMinCreator());
+    } catch(ComponentLookupException ex) {
+      throw new NoSuchComponentException(ex);
+    }
 
     this.updaterJob = new IndexUpdaterJob(this);
 
@@ -189,44 +202,27 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
     return new NexusIndex(this, localRepository, NexusIndex.DETAILS_FULL);
   }
 
-  private ArrayList<IndexCreator> getFullCreator() {
-    if(fullCreators == null) {
-      try {
-        PlexusContainer container = MavenPluginActivator.getDefault().getPlexusContainer();
-        IndexCreator min = container.lookup(IndexCreator.class, MinimalArtifactInfoIndexCreator.ID);
-        IndexCreator mavenPlugin = container.lookup(IndexCreator.class, MavenPluginArtifactInfoIndexCreator.ID);
-        IndexCreator mavenArchetype = container.lookup(IndexCreator.class, MavenArchetypeArtifactInfoIndexCreator.ID);
-        IndexCreator jar = container.lookup(IndexCreator.class, JarFileContentsIndexCreator.ID);
+  private List<IndexCreator> getFullCreator() throws ComponentLookupException {
+    List<IndexCreator> creators = new ArrayList<IndexCreator>();
+    IndexCreator min = container.lookup(IndexCreator.class, MinimalArtifactInfoIndexCreator.ID);
+    IndexCreator mavenPlugin = container.lookup(IndexCreator.class, MavenPluginArtifactInfoIndexCreator.ID);
+    IndexCreator mavenArchetype = container.lookup(IndexCreator.class, MavenArchetypeArtifactInfoIndexCreator.ID);
+    IndexCreator jar = container.lookup(IndexCreator.class, JarFileContentsIndexCreator.ID);
 
-        fullCreators = new ArrayList<IndexCreator>();
-        fullCreators.add(min);
-        fullCreators.add(jar);
-        fullCreators.add(mavenPlugin);
-        fullCreators.add(mavenArchetype);
-      } catch(ComponentLookupException ce) {
-        String msg = "Error looking up component ";
-        log.error(msg, ce);
-      }
-    }
-    return fullCreators;
+    creators.add(min);
+    creators.add(jar);
+    creators.add(mavenPlugin);
+    creators.add(mavenArchetype);
+    return creators;
   }
 
-  private ArrayList<IndexCreator> getMinCreator() {
-    if(minCreators == null) {
-      try {
-        PlexusContainer container = MavenPluginActivator.getDefault().getPlexusContainer();
-        IndexCreator min = container.lookup(IndexCreator.class, MinimalArtifactInfoIndexCreator.ID);
-        IndexCreator mavenArchetype = container.lookup(IndexCreator.class, MavenArchetypeArtifactInfoIndexCreator.ID);
-        minCreators = new ArrayList<IndexCreator>();
-        minCreators.add(min);
-        minCreators.add(mavenArchetype);
-      } catch(ComponentLookupException ce) {
-        String msg = "Error looking up component ";
-        log.error(msg, ce);
-      }
-
-    }
-    return minCreators;
+  private List<IndexCreator> getMinCreator() throws ComponentLookupException {
+    List<IndexCreator> creators = new ArrayList<IndexCreator>();
+    IndexCreator min = container.lookup(IndexCreator.class, MinimalArtifactInfoIndexCreator.ID);
+    IndexCreator mavenArchetype = container.lookup(IndexCreator.class, MavenArchetypeArtifactInfoIndexCreator.ID);
+    creators.add(min);
+    creators.add(mavenArchetype);
+    return creators;
   }
 
   /** for Unit test */
@@ -692,19 +688,27 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
     return repository == null ? null : getIndexer().getIndexingContexts().get(repository.getUid());
   }
 
-  private NexusIndexer getIndexer() {
+  public NexusIndexer getIndexer() {
     synchronized(indexerLock) {
       if(indexer == null) {
-        indexer = MavenPluginActivator.getDefault().getNexusIndexer();
+        try {
+          indexer = container.lookup(NexusIndexer.class);
+        } catch(ComponentLookupException ex) {
+          throw new NoSuchComponentException(ex);
+        }
       }
     }
     return indexer;
   }
 
-  private ArtifactContextProducer getArtifactContextProducer() {
+  public ArtifactContextProducer getArtifactContextProducer() {
     synchronized(contextProducerLock) {
       if(artifactContextProducer == null) {
-        artifactContextProducer = MavenPluginActivator.getDefault().getArtifactContextProducer();
+        try {
+          artifactContextProducer = container.lookup(ArtifactContextProducer.class);
+        } catch(ComponentLookupException ex) {
+          throw new NoSuchComponentException(ex);
+        }
       }
     }
     return artifactContextProducer;
@@ -958,24 +962,21 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
       repositoryPath = repository.getBasedir().getCanonicalFile();
     }
 
-    ArrayList<IndexCreator> indexers = getIndexers(details);
-
     indexingContext = getIndexer().addIndexingContextForced(repository.getUid(), //
         repository.getUrl(), //
         repositoryPath, //
         directory, //
         repository.getUrl(), null, //
-        indexers);
+        minCreators);
 
     indexingContext.setSearchable(false);
 
     return indexingContext;
   }
 
-  protected ArrayList<IndexCreator> getIndexers(String details) {
+  protected List<IndexCreator> getIndexers(String details) {
     boolean fullIndex = NexusIndex.DETAILS_FULL.equals(details);
-    ArrayList<IndexCreator> indexers = fullIndex ? getFullCreator() : getMinCreator();
-    return indexers;
+    return fullIndex ? fullCreators : minCreators;
   }
 
   public void repositoryRemoved(IRepository repository, IProgressMonitor monitor) {
@@ -1177,11 +1178,12 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
 
   protected IndexUpdateRequest newIndexUpdateRequest(IRepository repository, IndexingContext context,
       IProgressMonitor monitor) throws IOException, CoreException {
+    //TODO: remove Wagon API
     ProxyInfo proxyInfo = maven.getProxyInfo(repository.getProtocol());
     AuthenticationInfo authenticationInfo = repository.getAuthenticationInfo();
 
-    IndexUpdateRequest request = new IndexUpdateRequest(context, new AsyncFetcher(authenticationInfo, proxyInfo,
-        monitor));
+    IndexUpdateRequest request = new IndexUpdateRequest(context, new AetherClientResourceFetcher(authenticationInfo,
+        proxyInfo, monitor));
     File localRepo = repositoryRegistry.getLocalRepository().getBasedir();
     File indexCacheBasedir = new File(localRepo, ".cache/m2e/" + MavenPluginActivator.getVersion()).getCanonicalFile(); //$NON-NLS-1$
     File indexCacheDir = new File(indexCacheBasedir, repository.getUid());
@@ -1297,5 +1299,23 @@ public class NexusIndexManager implements IndexManager, IMavenProjectChangedList
     }
 
     return new String(buff);
+  }
+
+  /**
+   * @since 1.5
+   */
+  public IndexUpdater getIndexUpdate() {
+    return indexUpdater;
+  }
+
+  /**
+   * @since 1.5
+   */
+  public ArchetypeDataSource getArchetypeCatalog() {
+    try {
+      return container.lookup(ArchetypeDataSource.class, "nexus");
+    } catch(ComponentLookupException ex) {
+      throw new NoSuchComponentException(ex);
+    }
   }
 }

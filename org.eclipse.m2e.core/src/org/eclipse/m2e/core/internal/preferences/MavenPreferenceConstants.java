@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 Sonatype, Inc.
+ * Copyright (c) 2008-2014 Sonatype, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,9 @@
  *******************************************************************************/
 
 package org.eclipse.m2e.core.internal.preferences;
+
+import org.eclipse.m2e.core.internal.launch.MavenRuntimeManagerImpl;
+
 
 /**
  * Maven preferences constants
@@ -25,13 +28,13 @@ public interface MavenPreferenceConstants {
   /** true or false */
   // public static final String P_CHECK_LATEST_PLUGIN_VERSION = PREFIX+"checkLatestPluginVersion";
 
-  /** String ??? */
-  // public static final String P_GLOBAL_CHECKSUM_POLICY = PREFIX+"globalChecksumPolicy";
+  /** String */
+  public static final String P_GLOBAL_CHECKSUM_POLICY = PREFIX + "globalChecksumPolicy";
 
   /** boolean */
   public static final String P_OFFLINE = PREFIX + "offline"; //$NON-NLS-1$
 
-  /** boolean. if true, use org.sonatype.aether.repository.RepositoryPolicy.UPDATE_POLICY_NEVER as global update policy */
+  /** boolean. if true, use org.eclipse.aether.repository.RepositoryPolicy.UPDATE_POLICY_NEVER as global update policy */
   public static final String P_GLOBAL_UPDATE_NEVER = PREFIX + "globalUpdatePolicy"; //$NON-NLS-1$
 
   /** boolean */
@@ -61,8 +64,11 @@ public interface MavenPreferenceConstants {
   /** boolean */
   public static final String P_DISABLE_JDK_CHECK = PREFIX + "disableJdkCheck"; //$NON-NLS-1$
 
-  /** String */
+  /** String, list of configured maven installations separated by '|', see {@link MavenRuntimeManagerImpl} */
   public static final String P_RUNTIMES = PREFIX + "runtimes"; //$NON-NLS-1$
+
+  /** Root node of extended maven installation attributes, see {@link MavenRuntimeManagerImpl} */
+  public static final String P_RUNTIMES_NODE = PREFIX + "runtimesNodes"; //$NON-NLS-1$
 
   /** String */
   public static final String P_DEFAULT_RUNTIME = PREFIX + "defaultRuntime"; //$NON-NLS-1$
@@ -96,13 +102,56 @@ public interface MavenPreferenceConstants {
   /** boolean **/
   public static final String P_DEFAULT_POM_EDITOR_PAGE = "eclipse.m2.defaultPomEditorPage"; //$NON-NLS-1$
 
-  /** boolean **/
+  /**
+   * boolean
+   * 
+   * @deprecated Use {@link MavenPreferenceConstants#P_DUP_OF_PARENT_GROUPID_PB} instead
+   */
+  @Deprecated
   public static final String P_DISABLE_GROUPID_DUP_OF_PARENT_WARNING = PREFIX
       + ".disableGroupIdDuplicateOfParentWarning"; //$NON-NLS-1$
 
-  /** boolean **/
+  /**
+   * boolean
+   *
+   * @deprecated Use {@link MavenPreferenceConstants#P_DISABLE_VERSION_DUP_OF_PARENT_WARNING} instead
+   */
+  @Deprecated
   public static final String P_DISABLE_VERSION_DUP_OF_PARENT_WARNING = PREFIX
       + ".disableVersionDuplicateOfParentWarning"; //$NON-NLS-1$
+
+  /**
+   * @since 1.5
+   **/
+  static final String PROBLEM_PREFIX = PREFIX + "problem.";
+
+  /**
+   * Valid values : ignore, warning or error
+   * 
+   * @since 1.5
+   **/
+  public static final String P_DUP_OF_PARENT_GROUPID_PB = PROBLEM_PREFIX + "duplicateParentGroupId"; //$NON-NLS-1$
+
+  /**
+   * Valid values : ignore, warning or error
+   * 
+   * @since 1.5
+   **/
+  public static final String P_DUP_OF_PARENT_VERSION_PB = PROBLEM_PREFIX + "duplicateParentVersion"; //$NON-NLS-1$
+
+  /**
+   * Valid values : ignore, warning or error
+   * 
+   * @since 1.5
+   **/
+  public static final String P_OUT_OF_DATE_PROJECT_CONFIG_PB = PROBLEM_PREFIX + "outofdateProjectConfig"; //$NON-NLS-1$
+
+  /**
+   * Valid values : ignore, warning or error
+   * 
+   * @since 1.5
+   **/
+  public static final String P_NOT_COVERED_MOJO_EXECUTION_PB = PROBLEM_PREFIX + "notCoveredMojoExecution"; //$NON-NLS-1$
 
   /** string **/
   public static final String P_LIFECYCLE_MAPPINGS = PREFIX + "lifecycleMappings"; //$NON-NLS-1$

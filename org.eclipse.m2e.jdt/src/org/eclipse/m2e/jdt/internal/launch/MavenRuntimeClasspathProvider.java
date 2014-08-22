@@ -16,8 +16,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -51,6 +53,8 @@ import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.IMavenProjectRegistry;
 import org.eclipse.m2e.core.project.ResolverConfiguration;
+import org.eclipse.m2e.core.project.configurator.AbstractProjectConfigurator;
+import org.eclipse.m2e.core.project.configurator.IClassifierClasspathProjectConfigurator;
 import org.eclipse.m2e.jdt.IClassifierClasspathProvider;
 import org.eclipse.m2e.jdt.IClasspathManager;
 import org.eclipse.m2e.jdt.IMavenClassifierManager;
@@ -229,6 +233,21 @@ public class MavenRuntimeClasspathProvider extends StandardClasspathProvider {
         case IClasspathEntry.CPE_SOURCE:
           if(!projectResolved) {
 
+            if(!THIS_PROJECT_CLASSIFIER.equals(classifier)) {
+              //project dependency with classifier, try to find output location:
+              List<AbstractProjectConfigurator> projectConfigurators = MavenPlugin.getProjectConfigurationManager()
+                  .getLifecycleMapping(projectFacade).getProjectConfigurators(projectFacade, new NullProgressMonitor());
+              for(AbstractProjectConfigurator configurator : projectConfigurators) {
+                if(configurator instanceof IClassifierClasspathProjectConfigurator) {
+                  Map<String, IFolder> classifiedOutputLocations = ((IClassifierClasspathProjectConfigurator) configurator)
+                      .getClassifiedOutputLocations(projectFacade, new NullProgressMonitor());
+                  IFolder outputLocation = classifiedOutputLocations.get(classifier);
+                  if(outputLocation != null) {
+                    resolved.add(JavaRuntime.newArchiveRuntimeClasspathEntry(outputLocation.getLocation()));
+                  }
+                }
+              }
+            }
             IMavenClassifierManager mavenClassifierManager = MavenJdtPlugin.getDefault().getMavenClassifierManager();
             IClassifierClasspathProvider classifierClasspathProvider = mavenClassifierManager
                 .getClassifierClasspathProvider(projectFacade, classifier);

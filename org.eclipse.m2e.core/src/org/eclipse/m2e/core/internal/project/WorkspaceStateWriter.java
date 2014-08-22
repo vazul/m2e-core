@@ -16,12 +16,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -29,15 +32,19 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.QualifiedName;
 
 import org.apache.maven.project.MavenProject;
 
+import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.embedder.ArtifactKey;
 import org.eclipse.m2e.core.internal.project.registry.MavenProjectManager;
 import org.eclipse.m2e.core.project.IMavenProjectChangedListener;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.MavenProjectChangedEvent;
+import org.eclipse.m2e.core.project.configurator.AbstractProjectConfigurator;
+import org.eclipse.m2e.core.project.configurator.IClassifierClasspathProjectConfigurator;
 
 
 /**
@@ -106,6 +113,22 @@ public class WorkspaceStateWriter implements IMavenProjectChangedListener {
               log.warn("Could not determine project {} main artifact extension.", project);
             }
           }
+          //add additional classified output locations
+          List<AbstractProjectConfigurator> projectConfigurators = MavenPlugin.getProjectConfigurationManager()
+              .getLifecycleMapping(projectFacade).getProjectConfigurators(projectFacade, new NullProgressMonitor());
+          for(AbstractProjectConfigurator configurator : projectConfigurators) {
+            if(configurator instanceof IClassifierClasspathProjectConfigurator) {
+              Map<String, IFolder> classifiedOutputLocations = ((IClassifierClasspathProjectConfigurator) configurator)
+                  .getClassifiedOutputLocations(projectFacade, new NullProgressMonitor());
+              for(Map.Entry<String, IFolder> classifiedOutput : classifiedOutputLocations.entrySet()) {
+                String classifier = classifiedOutput.getKey() == null ? "" : classifiedOutput.getKey();
+                String key = artifact.getGroupId()
+                    + ":" + artifact.getArtifactId() + ":jar:" + classifier + ":" + artifact.getVersion(); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                state.put(key, classifiedOutput.getValue().getLocation().toFile().getCanonicalPath());
+              }
+            }
+          }
+
           // assume test output location gets attached as classified=tests
           IResource testOutputLocation = root.findMember(projectFacade.getTestOutputLocation());
           if(!"pom".equals(projectFacade.getPackaging()) && testOutputLocation != null && testOutputLocation.exists()) { //$NON-NLS-1$

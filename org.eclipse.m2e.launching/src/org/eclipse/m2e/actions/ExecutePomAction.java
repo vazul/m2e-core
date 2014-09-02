@@ -21,6 +21,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IConfigurationElement;
@@ -203,7 +204,8 @@ public class ExecutePomAction implements ILaunchShortcut, IExecutableExtension {
           null, //
           NLS.bind(Messages.ExecutePomAction_executing, launchSafeGoalName,
               basedir.getLocation().toString().replace('/', '-')));
-      workingCopy.setAttribute(MavenLaunchConstants.ATTR_POM_DIR, basedir.getLocation().toOSString());
+      workingCopy.setAttribute(MavenLaunchConstants.ATTR_POM_DIR, "${workspace_loc:" + basedir.getFullPath().toString()
+          + "}");
       workingCopy.setAttribute(MavenLaunchConstants.ATTR_GOALS, goal);
       workingCopy.setAttribute(IDebugUIConstants.ATTR_PRIVATE, true);
       workingCopy.setAttribute(RefreshTab.ATTR_REFRESH_SCOPE, "${project}"); //$NON-NLS-1$
@@ -361,10 +363,19 @@ public class ExecutePomAction implements ILaunchShortcut, IExecutableExtension {
 
     log.info("Creating new launch configuration");
 
-    String newName = launchManager.generateLaunchConfigurationName(basedirLocation.lastSegment());
+    String launchConfigurationName = basedirLocation.lastSegment();
+    IContainer[] containers = ResourcesPlugin.getWorkspace().getRoot()
+        .findContainersForLocationURI(basedirLocation.toFile().toURI());
+    for(IContainer iContainer : containers) {
+      if(iContainer instanceof IProject) {
+        launchConfigurationName = iContainer.getName();
+      }
+    }
+    String newName = launchManager.generateLaunchConfigurationName(launchConfigurationName);
     try {
       ILaunchConfigurationWorkingCopy workingCopy = launchConfigurationType.newInstance(null, newName);
-      workingCopy.setAttribute(MavenLaunchConstants.ATTR_POM_DIR, basedirLocation.toString());
+      workingCopy.setAttribute(MavenLaunchConstants.ATTR_POM_DIR, "${workspace_loc:" + basedir.getFullPath().toString()
+          + "}");
 
       setProjectConfiguration(workingCopy, basedir);
 

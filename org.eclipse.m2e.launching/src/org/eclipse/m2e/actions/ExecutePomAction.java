@@ -214,6 +214,9 @@ public class ExecutePomAction implements ILaunchShortcut, IExecutableExtension {
         workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_JRE_CONTAINER_PATH, path.toPortableString());
       }
 
+      //add MAVEN_OPTS environment property
+      workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, "${env_var:MAVEN_OPTS}");
+
       // TODO when launching Maven with debugger consider to add the following property
       // -Dmaven.surefire.debug="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000 -Xnoagent -Djava.compiler=NONE"
 
@@ -369,6 +372,9 @@ public class ExecutePomAction implements ILaunchShortcut, IExecutableExtension {
       ILaunchConfigurationWorkingCopy workingCopy = launchConfigurationType.newInstance(null, newName);
       workingCopy.setAttribute(MavenLaunchConstants.ATTR_POM_DIR,
           LaunchingUtils.generateProjectLocationVariableExpression(basedir.getProject()));
+
+      //add MAVEN_OPTS environment property
+      workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, "${env_var:MAVEN_OPTS}");
 
       setProjectConfiguration(workingCopy, basedir);
 

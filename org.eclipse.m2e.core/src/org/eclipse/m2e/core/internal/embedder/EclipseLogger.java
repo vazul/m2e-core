@@ -19,8 +19,14 @@ import org.eclipse.m2e.core.embedder.IMavenConfiguration;
 import org.eclipse.m2e.core.internal.Messages;
 
 
-class EclipseLogger implements Logger {
+public class EclipseLogger implements Logger {
   private static final org.slf4j.Logger log = LoggerFactory.getLogger(EclipseLogger.class);
+
+  public static InheritableThreadLocal<String> prefix = new InheritableThreadLocal<String>() {
+    protected String initialValue() {
+      return "";
+    };
+  };
 
   private final IMavenConfiguration mavenConfiguration;
 
@@ -30,61 +36,61 @@ class EclipseLogger implements Logger {
 
   public void debug(String msg) {
     if(isDebugEnabled()) {
-      log.debug(msg);
+      log.debug(prefix.get() + msg);
     }
   }
 
   public void debug(String msg, Throwable t) {
     if(isDebugEnabled()) {
-      log.debug(msg + " " + t.getMessage(), t);
+      log.debug(prefix.get() + msg + " " + t.getMessage(), t);
     }
   }
 
   public void info(String msg) {
     if(isInfoEnabled()) {
-      log.info(msg);
+      log.info(prefix.get() + msg);
     }
   }
 
   public void info(String msg, Throwable t) {
     if(isInfoEnabled()) {
-      log.info(msg + " " + t.getMessage(), t);
+      log.info(prefix.get() + msg + " " + t.getMessage(), t);
     }
   }
 
   public void warn(String msg) {
     if(isWarnEnabled()) {
-      log.warn(msg);
+      log.warn(prefix.get() + msg);
     }
   }
 
   public void warn(String msg, Throwable t) {
     if(isWarnEnabled()) {
-      log.warn(msg + " " + t.getMessage(), t);
+      log.warn(prefix.get() + msg + " " + t.getMessage(), t);
     }
   }
 
   public void fatalError(String msg) {
     if(isFatalErrorEnabled()) {
-      log.error(msg);
+      log.error(prefix.get() + msg);
     }
   }
 
   public void fatalError(String msg, Throwable t) {
     if(isFatalErrorEnabled()) {
-      log.error(msg + " " + t.getMessage(), t);
+      log.error(prefix.get() + msg + " " + t.getMessage(), t);
     }
   }
 
   public void error(String msg) {
     if(isErrorEnabled()) {
-      log.error(msg);
+      log.error(prefix.get() + msg);
     }
   }
 
   public void error(String msg, Throwable t) {
     if(isErrorEnabled()) {
-      log.error(msg + " " + t.getMessage(), t);
+      log.error(prefix.get() + msg + " " + t.getMessage(), t);
     }
   }
 

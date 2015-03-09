@@ -51,6 +51,7 @@ import org.eclipse.m2e.core.internal.builder.BuildResultCollector.Message;
 import org.eclipse.m2e.core.internal.builder.IIncrementalBuildFramework.BuildContext;
 import org.eclipse.m2e.core.internal.builder.plexusbuildapi.AbstractEclipseBuildContext;
 import org.eclipse.m2e.core.internal.builder.plexusbuildapi.PlexusBuildAPI;
+import org.eclipse.m2e.core.internal.embedder.EclipseLogger;
 import org.eclipse.m2e.core.internal.embedder.MavenProjectMutableState;
 import org.eclipse.m2e.core.internal.markers.IMavenMarkerManager;
 import org.eclipse.m2e.core.internal.markers.SourceLocation;
@@ -104,6 +105,7 @@ public class MavenBuilderImpl {
 
     MavenProject mavenProject = projectFacade.getMavenProject();
     IProject project = projectFacade.getProject();
+    EclipseLogger.prefix.set(project.getName() + ": ");
 
     IResourceDelta delta = getDeltaProvider().getDelta(project);
 
@@ -169,6 +171,7 @@ public class MavenBuilderImpl {
       for(IIncrementalBuildFramework.BuildContext context : incrementalContexts) {
         context.release();
       }
+      EclipseLogger.prefix.set("");
     }
 
     // Refresh files modified by build participants/maven plugins

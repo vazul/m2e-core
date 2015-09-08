@@ -19,6 +19,8 @@ import java.util.Set;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jdt.core.IAccessRule;
+import org.eclipse.jdt.core.JavaCore;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
@@ -127,6 +129,9 @@ public class DefaultClasspathManagerDelegate implements IClasspathManagerDelegat
         entry.setArtifactKey(new ArtifactKey(a.getGroupId(), a.getArtifactId(), a.getBaseVersion(), a.getClassifier()));
         entry.setScope(a.getScope());
         entry.setOptionalDependency(a.isOptional());
+        if(Artifact.SCOPE_RUNTIME.equals(a.getScope())) {
+          entry.addAccessRule(JavaCore.newAccessRule(new Path("**"), IAccessRule.K_NON_ACCESSIBLE));
+        }
       }
     }
   }

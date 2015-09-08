@@ -494,7 +494,7 @@ public abstract class AbstractJavaProjectConfigurator extends AbstractProjectCon
     // 360962 keep forbidden_reference severity set by the user
     IJavaProject jp = JavaCore.create(request.getProject());
     if(jp != null && jp.getOption(JavaCore.COMPILER_PB_FORBIDDEN_REFERENCE, false) == null) {
-      options.put(JavaCore.COMPILER_PB_FORBIDDEN_REFERENCE, "warning"); //$NON-NLS-1$
+      options.put(JavaCore.COMPILER_PB_FORBIDDEN_REFERENCE, "error"); //$NON-NLS-1$
     }
   }
 

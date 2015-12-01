@@ -20,6 +20,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.IAccessRule;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.JavaCore;
 
 import org.apache.maven.artifact.Artifact;
@@ -130,7 +131,9 @@ public class DefaultClasspathManagerDelegate implements IClasspathManagerDelegat
         entry.setScope(a.getScope());
         entry.setOptionalDependency(a.isOptional());
         if(Artifact.SCOPE_RUNTIME.equals(a.getScope())) {
-          entry.addAccessRule(JavaCore.newAccessRule(new Path("**"), IAccessRule.K_NON_ACCESSIBLE));
+          entry.addAccessRule(JavaCore.newAccessRule(new Path("**"),
+              entry.getEntryKind() == IClasspathEntry.CPE_PROJECT ? IAccessRule.K_DISCOURAGED
+                  : IAccessRule.K_NON_ACCESSIBLE));
         }
       }
     }
